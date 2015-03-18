@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta encoding='utf-8' />
+	<!-- Stíluslap egy egyszerû oldalfelépítéshez -->
+	<style>
+		body{
+			margin:0;
+			padding:0;
+			background-color:#aaa;
+		}
+		#gameCanvas{
+			border: 1px solid #666;
+			margin-left:auto;
+			margin-right:auto;
+			margin-top: 5%;
+			display:block;
+		}
+	</style>
+</head>
+<body>
+	<!-- A fõ elem, a Canvas, a vászon ahova rajzolgatunk -->
+	<canvas id='gameCanvas' width='640' height='480'> </canvas>
+	<!-- Húzzuk be a scriptet is, ami a játékot valósítja meg -->
+	<script src='gameScript.js' type='text/javascript'></script>
+</body>
+</html>
