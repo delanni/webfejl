@@ -34,7 +34,7 @@ Vector.random = function(scaleX, scaleY){
 	if (arguments.length == 0){
 		scaleX = scaleY = 1;
 	} else if (arguments.length == 1){
-		scaleY = scaleY;
+		scaleY = scaleX;
 	}
 
 	return new Vector((Math.random()-0.5)*scaleX,(Math.random()-0.5)*scaleY);

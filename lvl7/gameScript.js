@@ -29,37 +29,31 @@ var world = {
 		}
 	},
 	handleInputs : function(mouse,keyboard){
-		// Ő kapja meg az egér állapotát, és tesz vele valamit
-		// Pl. feléje mozgatja a részecskéket
-
-		// Először vegyük az egérpozíció helyvektorát
 		var mousePos = new Vector(mouse.x,mouse.y);
 
-		// Iteráljunk végig az összes elemen
 		for(var i=0; i< world.entities.length; i++){
-			// Vegyük ki az aktuális elemet
 			var entity = world.entities[i];
-			// S ha ez az elem bizony egy négyzet
 			if (entity instanceof Square){
-				// Akkor annak sebessége legyen a pozíciójából az egér helyvektorához húzott vektor
-				// Ezt vektoralgebrában egyszerű kivonással megoldhatjuk
-				entity.speed = mousePos.subtract(entity.position);
+				// Fizikához közelebbi hatás eléréséhez ne a sebesség, hanem a gyorsulás legyen adott
+				entity.acceleration = mousePos.subtract(entity.position);
 			}
 		}
 	}
 };
 
-// Tartsuk meg csak a véletlenszerűen generált elemeket
 var colors = ["#a171ca", "#0a46c1", "#99ea49", "#abac0a"];
 var squares = [];
 for(var i=0; i<50; i++){
-	var sq = squares[i] = new Square(Math.random()*cWidth,Math.random()*cHeight, 15, colors[i%4]);
+	var sq = squares[i] = new Square(Math.random()*cWidth,Math.random()*cHeight, {
+		size:15,
+		color:colors[i%4],
+		friction: Math.random()*0.1
+	});
 	world.insert(sq,true, true);
 }
 
 var lastT = 0;
 var gameLoop = function(t){
-	// Számoljuk ki mennyi ideig futott a legutóbbi render ciklus
 	if (lastT == 0){
 		var delta=60/1000;
 		lastT = t;

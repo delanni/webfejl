@@ -40,6 +40,17 @@ Vector.prototype.normalize = function(){
 	return this;
 };
 
+// Korlátozó függvény, amivel könnyen, gyorsan limitálhatjuk a sebességet pl.
+Vector.prototype.clamp = function(min,max){
+	if (min > max) throw new Error("Inverse ranges");
+	if (this.x > max) this.x = max; else if (this.x < min) this.x = min;
+	if (this.y > max) this.y = max; else if (this.y < min) this.y = min;
+};
+
+Vector.prototype.clone = function(){
+	return this.scale(1);
+};
+
 Vector.random = function(scaleX, scaleY){
 	if (arguments.length == 0){
 		scaleX = scaleY = 1;
