@@ -47,7 +47,7 @@ for(var i=0; i<50; i++){
 	var sq = squares[i] = new Square(Math.random()*cWidth,Math.random()*cHeight, {
 		size:15,
 		color:colors[i%4],
-		friction: Math.random()*0.1
+		friction: Math.random()*0.01
 	});
 	world.insert(sq,true, true);
 }
@@ -85,8 +85,9 @@ var mouse = {
 	right:false
 };
 canvas.onmousemove = function(ev){
-	mouse.x = ev.offsetX;
-	mouse.y = ev.offsetY;
+	var rect = canvas.getBoundingClientRect();
+	mouse.x = ev.offsetX || ev.clientX - rect.left;
+	mouse.y = ev.offsetY || ev.clientY - rect.top;
 };
 /** Megelőlegezhetjük ezt a billentyűzetre is **/
 var keyboard = {};
