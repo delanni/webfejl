@@ -3,20 +3,21 @@
 	Függõség: Vector
 */
 
-// Az egyre gyarapodó paraméterlista helyett options argumentum objektum
 var Square = function(x,y, options){
-	// Ha nem volt options megadva, akkor legyen az egy üres objektum
 	options = options || {};
 
 	this.position = new Vector(x,y);
+	
+	this.world = options.world;
 
 	this.size = options.size || 5;
 	this.color = options.color ||  "#eb01aa";
 	this.speed  = options.speed || new Vector();
 	this.acceleration = options.acceleration || new Vector();
 
-	// A valószerűbb viselkedéshez csökkenteni, és korlátozni kell a részecskék sebességét
-	this.friction = options.friction || 0.1;
+	// Vezessük be a tömeg jelenlétét, hogy a gravitációs eséshez tudjuk használni
+	this.mass = options.mass;
+	this.friction = options.friction || 0;
 	this.maxSpeed = Square.SPD_MAX;
 	this.minSpeed = Square.SPD_MIN;
 };
@@ -24,13 +25,21 @@ var Square = function(x,y, options){
 Square.prototype.drawTo = function(context){
 	context.fillStyle = this.color;
 	context.fillRect(this.position.x,this.position.y,this.size, this.size);
+	if (this.acceleration.x || this.acceleration.y){
+		context.strokeStyle = this.color;
+		context.beginPath();
+		context.moveTo(this.position.x,this.position.y);
+		context.lineTo(this.position.x+this.acceleration.x/3, this.position.y+this.acceleration.y/3);
+		context.stroke();
+	}
 };
 
 Square.prototype.animate = function(time){
-	// Az animálás függvény ezek után a fizikai törvényeknek nagyjából engedelmeskedve a gyorsulásból számít sebességet, sebességből pedig pozíciót
 	this.speed.addInPlace(this.acceleration.scale(time/1000));
+	
+	// Számoljuk bele a gravitációs szabadesés hatását is
+	this.speed.addInPlace(this.world.gravity.scale(time/1000 * this.mass));
 
-	// Csökkentjük a sebességet a súrlódással, és limitáljuk azt
 	this.speed.clamp(this.minSpeed, this.maxSpeed);
  	this.speed.scaleInPlace(1-this.friction);
 
@@ -49,5 +58,5 @@ Square.prototype.clone = function() {
 	}
 };
 
-Square.SPD_MIN = -150;
-Square.SPD_MAX = 150;
+Square.SPD_MIN = -600;
+Square.SPD_MAX = 600;
