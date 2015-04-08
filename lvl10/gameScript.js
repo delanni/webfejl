@@ -55,27 +55,29 @@ var world = {
 		}
 	},
 	handleInputs: function(mouse, keyboard) {
-		// Alma
-		player.speed.x = (keyboard[39] - keyboard[37])*100;
-		player.speed.y = (keyboard[40] - keyboard[38])*100;
+		// Számítsuk ki a tank aktuális sebességét a lenyomott gombokból
+		player.speed.x = (keyboard[39]+keyboard[68] - keyboard[37] - keyboard[65])*100;
+		player.speed.y = (keyboard[40]+keyboard[83] - keyboard[38] - keyboard[87])*100;
+
 
 		var mousePos = new Vector(mouse.x, mouse.y);
-		var cannonpos = player.position.clone();
+		var cannonEnd = player.position.add(player.cannonVector);
+		var playerToMouseVector = mousePos.subtract(player.position);
 		if (mouse.left) {
 			var explosion = new Explosion({
-				particles: [new Circle(cannonpos.x,cannonpos.y,{
+				particles: [new Circle(0,0,{
 						size: 10,
 						color: colors[1],
 						friction: 0.005,
 						world: world,
 						mass: 2,
-						speed: mousePos.clone().subtract(cannonpos).normalize().scaleInPlace(700),
+						speed: playerToMouseVector.clone().normalize().scaleInPlace(700),
 						life: 10000
 					})],
 				generator: function() {
-					return new Square(cannonpos.x,cannonpos.y,{
+					return new Square(0,0,{
 						size: 3,
-						color: colors[3],
+						color: fireColors[Math.floor(Math.random()*3)],
 						friction: 0.05 + Math.random() * 0.001,
 						world: world,
 						mass: Math.random(),
@@ -87,29 +89,54 @@ var world = {
 				strengthMin: 100,
 				strengthMax: 400,
 				coneWidth:Math.PI/8,
-				coneOffset: Math.atan2(-mousePos.clone().subtract(cannonpos).y, mousePos.clone().subtract(cannonpos).x)
+				coneOffset: Math.atan2(-playerToMouseVector.y, playerToMouseVector.x)
 			});
 			
-			explosion.fire(cannonpos);
-			mouse.left =0;
+			explosion.fire(cannonEnd);
+			mouse.left=0;
 		}
 	}
 };
 
+// Egy objektum a játékosnak
 var player = {
+	// tároljuk a játékos helyét
 	position: new Vector(cWidth/2, cHeight/2),
+	// aktuális sebességét
 	speed: new Vector(),
+	// ágyújának állását egy vektorban
+	cannonVector: new Vector(),
+	// kirajzolható
 	drawTo: function(ctx){
+		// rajzoláshoz használjuk ezt a színt
 		ctx.fillStyle = "blueviolet";
-		ctx.fillRect(player.position.x,player.position.y,3,3);
+
+		// rajzoljunk ki egy kört, ami a tank felső része
+		ctx.beginPath();
+		ctx.arc(player.position.x, player.position.y, 6, 0, Math.PI*2);
+		ctx.fill();
+
+		// rajzoljunk ki egy kissé lefelé eltolt téglalapot, ami a tank teste
+		ctx.fillRect(player.position.x-12,player.position.y+6-4,24,8);
+
+		// végül rajzoljunk egy kis pálcikát, ami az ágyú irányába mutat
+		ctx.beginPath();
+		// a középpontban kezdődik
+		ctx.moveTo(player.position.x,player.position.y);
+		// és a középponthoz képest az ágyú vektor koordinátáival van eltolva
+		ctx.lineTo(player.position.x + player.cannonVector.x, player.position.y + player.cannonVector.y);
+		ctx.stroke();
 	},
 	animate: function(time){
+		var mousePos = new Vector(mouse.x, mouse.y);
 		player.position.addInPlace(player.speed.scale(time/1000));
+		player.cannonVector = mousePos.subtract(player.position).normalize().scaleInPlace(15);
 	}
 };
 
 world.insert(player, true, true);
 
+var fireColors = ['#FFFF47', '#FFBC42', '#FF5A1D'];
 var colors = ["#a171ca", "#0a46c1", "#99ea49", "#abac0a"];
 
 var lastT = 0;
@@ -163,7 +190,11 @@ var keyboard = {
 	38:0, // fel
 	40:0, // le
 	37:0, // bal
-	39:0  // jobb
+	39:0,  // jobb
+	87:0, // W - fel
+	83:0, // S - le
+	65:0, // A - bal
+	68:0, // D - jobb
 };
 document.onkeydown = function(ev){
 	if (ev.keyCode in keyboard){
