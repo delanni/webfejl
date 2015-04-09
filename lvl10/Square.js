@@ -15,7 +15,7 @@ var Square = function(x,y, options){
 	this.speed  = options.speed || new Vector();
 	this.acceleration = options.acceleration || new Vector();
 
-	this.life = options.life || Math.Infinity;
+	this.life = options.life || Infinity;
 
 	// Vezessük be a tömeg jelenlétét, hogy a gravitációs eséshez tudjuk használni
 	this.mass = options.mass;
@@ -26,7 +26,7 @@ var Square = function(x,y, options){
 
 Square.prototype.drawTo = function(context){
 	context.fillStyle = this.color;
-	context.fillRect(this.position.x,this.position.y,this.size, this.size);
+	context.fillRect(this.position.x-this.size/2,this.position.y-this.size/2,this.size, this.size);
 };
 
 Square.prototype.animate = function(time){
