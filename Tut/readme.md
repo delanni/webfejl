@@ -7,20 +7,20 @@ A javascript a böngészők által futtatott scriptnyelv/programozási nyelv. A 
 
 Az elkészülő játék egy egyszerű ügyességi játék lesz, amiben egy tankkal kell repülőket lelőni. A játék esztétikai célból némi fizikát és részecskerendszert is tartalmaz, a játéklogikához szükséges mozgatás, megjelenítés és ütközésdetektálásokon kívül. A fejlesztés 14 nagyobb lépésben történik. Ezek sorban a következők:
 
-    1 A projekt alapjai
-    2 A canvas és a renderloop alapjai
-    3 A játékvilág és rajzolás a canvas-en
-    4 Játékelemek animációja
-    5 Vektor és négyzet osztályok, példányosítás
-    6 Inputkezelés
-    7 Pszeudo-fizikai megközelítés
-    8 Pszeudo-fizika, gravitáció
-    9 Ágyú és robbanások
-    10 Játék alapok - A tank
-    11 Játék alapok - Ütközésdetektálás
-    12 Játék alapok - Rugalmas ütközés
-    13 Rendszerezés, refaktorálás
-    14 Játék logika - Ellenségek
+    [1. A projekt alapjai]
+    [2. A canvas és a renderloop alapjai]
+    [3. A játékvilág és rajzolás a canvas-en]
+    [4. Játékelemek animációja]
+    [5. Vektor és négyzet osztályok, példányosítás]
+    [6. Inputkezelés]
+    [7. Pszeudo-fizikai megközelítés]
+    [8. Pszeudo-fizika, gravitáció]
+    [9. Ágyú és robbanások]
+    [10. Játék alapok - A tank]
+    [11. Játék alapok - Ütközésdetektálás]
+    [12. Játék alapok - Rugalmas ütközés]
+    [13. Rendszerezés, refaktorálás]
+    [14. Játék logika - Ellenségek]
 
 Az út hosszú, de tanulságos. A forráskódot folyamatosan javítjuk és szépítjük, hogy a végén egy jól áttekinthető kódunk legyen.
     
