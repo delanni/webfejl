@@ -7,7 +7,7 @@ A javascript a böngészők által futtatott scriptnyelv/programozási nyelv. A 
 
 Az elkészülő játék egy egyszerű ügyességi játék lesz, amiben egy tankkal kell repülőket lelőni. A játék esztétikai célból némi fizikát és részecskerendszert is tartalmaz, a játéklogikához szükséges mozgatás, megjelenítés és ütközésdetektálásokon kívül. A fejlesztés 14 nagyobb lépésben történik. Ezek sorban a következők:
 
-1. [A projekt alapjai]()
+1. [A projekt alapjai](#1-a-projekt-alapjai)
 2. [A canvas és a renderloop alapjai]
 3. [A játékvilág és rajzolás a canvas-en]
 4. [Játékelemek animációja]
