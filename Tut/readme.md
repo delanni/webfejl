@@ -83,10 +83,11 @@ Valójában a _canvas_ nevű változót nem sokat fogjuk használni, hiszen az �
 Készítsünk egy alap függvényt, ami törli a vásznat. Ez a függvény paraméterül kapja a törlendő kontextust, és azt teljes egészében halvány szürkére színezi. 
 
 ```javascript
-var clearCtx = function(ctx){
-	ctx.fillStyle = "#eeeeee"; // #eeeeee halvány szürke
-    // Így elérjük a ctx gazda-vásznát, és innen tudjuk  dimenzióit
-	ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.width);
+var clearCtx = function(){
+    // Miután szürkére állítottuk az ecsetünk színét, rajzoljunk egy pont akkora téglalapot, ami lefedi a teljes vásznat.
+	ctx.fillStyle = "#eeeeee";
+    // Ehhez a kontextus fillRect függvényét használjuk, ami (x,y,szélesség, hosszúság) formájában téglalapot rajzol.
+	ctx.fillRect(0,0,cWidth,cHeight);
 };
 ```
 
@@ -107,6 +108,53 @@ A böngészőben most egy világos szürke vásznat kell látnunk. Bár ez még 
 
 3. A játékvilág és rajzolás a canvas-en
 ---------------
+
+Kezdjünk el objektumokat gyártani! Gyakori megközelítés a játékoknál, hogy készítünk egy *World objektumot*, amely tartalmazza (referenciája van rá) a játékban lévő összes entitást, egyedet, akit ki kell rajzolni, vagy animálni kell, vagy mindenesetre jó ha tudunk róla, hogy a világunkhoz tartozik. A world objektum a böngészőisten noteszfüzete, ahol nyilvántartja a világ állapotát. 
+
+
+Készítsünk tehát egy világ objektumot, ez az objektum tartalmazzon egy tömböt, aki nyilvántartja az összes kirajzolható entitást. Ezeken fogunk végigiterálni a render ciklusban, és rajzoljuk ki egyesével őket.
+
+Majd pedig készítsünk egy négyzet objektumot, amely kirajzolható, ezért tegyünk rá egy _drawTo_ függvényt, amely paraméterül kap egy kontextust, és kirajzolja rá a négyzetet, valahogyan, akárhogyan.
+
+```javascript
+// Világ objektum, egy tulajdonsága van, drawables, ami egy üres lista, tömb
+var world = {
+	drawables: []
+};
+
+// Négyzet objektum, egy függvénye van, a drawTo
+// abban mondja meg magáról az objektum, hogy ŐT hogyan és hova kell kirajzolni
+var square = {
+    square.drawTo : function(context){
+        // Hexa formátumban megadott színinfó
+        context.fillStyle = "#eb01aa";
+        // x, y, szélesség, hosszúság
+        context.fillRect(100,100,30,30);
+    }
+};
+
+// Adjuk őt hozzá a világhoz, hogy megjelenjen a renderelés során
+world.drawables.push(square);
+```
+
+Tehát elkészült egy világ. Elkészült egy négyzet, akinek van egy függvénye, amit hívva kirajzoljuk. Majd a négyzetet a világ rajzolható objektumokat tartalmazó tömbjébe helyeztük.
+
+Nincs más dolgunk, mint a render ciklusban egy jól formált for ciklussal végigmenni az összes elemén, és kirajzolni őket. Ehhez írjuk át a _gameLoop_ függvényünket a következőképp:
+
+```javascript
+var gameLoop = function(){
+	window.requestAnimationFrame(gameLoop);
+	clearCtx();
+
+	// Kirajzoljuk az összes kirajzolható elemet
+	for(var i=0;i<world.drawables.length;i++){
+		var drawable = world.drawables[i];
+		drawable.drawTo(ctx);
+	}
+};
+```
+
+Mint látható, a render ciklusban a világ állapotaként tárolt objektumokon (ami egyelőre 1 db négyzet) lovaglunk végig, és rajzoljuk ki őket. Ezek eredményeképp látunk egy négyzetet a (100,100) koordinátapártól kezdődően (30,30) méretben.
 
 4. Játékelemek animációja
 ---------------
