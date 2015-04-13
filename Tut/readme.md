@@ -67,6 +67,44 @@ A stílusokkal ki szerettem volna emelni, hogy középen már ott van egy vászo
 2. A canvas és a renderloop alapjai
 ---------------
 
+A második lépésben a HTML Canvas rajzolást készítjük elő, és egy alapvető ciklust készítünk a játékhoz, ami folyamatosan frissíteni fogja, és kirajzolja a játékunk világának állapotát. Lássunk is hozzá, ehhez az eddig üresen várakozó *gameScript.js* fájlt kell szerkesztenünk. Amit ide írunk, annak hatását a HTML-ben lévő hivatkozás miatt az *index.html*-ben látjuk.
+
+Valamilyen szelektorokkal fogjuk meg az alap DOM elemeket, amiket használni fogunk, és csináljunk változókat a gyakran használatos tulajdonságaiknak, pl.: a vászon szélességének, és hosszának.
+
+```javascript
+var canvas = document.getElementById("gameCanvas");
+var cWidth = canvas.width;
+var cHeight = canvas.height;
+var ctx = canvas.getContext("2d");
+```
+
+Valójában a _canvas_ nevű változót nem sokat fogjuk használni, hiszen az összes rajz művelet valójában a vászon *render kontextusán* (_ctx_) fog történni. Ezért ezt is külön változóba helyeztük.
+
+Készítsünk egy alap függvényt, ami törli a vásznat. Ez a függvény paraméterül kapja a törlendő kontextust, és azt teljes egészében halvány szürkére színezi. 
+
+```javascript
+var clearCtx = function(ctx){
+	ctx.fillStyle = "#eeeeee"; // #eeeeee halvány szürke
+    // Így elérjük a ctx gazda-vásznát, és innen tudjuk  dimenzióit
+	ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.width);
+};
+```
+
+Miután ez a függvényünk megvan, már csak valamilyen módon kell egy örökké futó ciklust készítenünk, ami ezt a függvényt hívogatja. A böngészőkben van egy pár lehetőségünk időzítve hívogatni függvényeket, például a _setTimeout_ vagy _setInterval_ függvények. A modern böngészőkön azonban adott egy _requestAnimationFrame_ függvény, amely másodpercenként 60-nál többször nem hívja meg a függvényt. Ezt a függvényt ajánlják az animációk és játékok időzítésének üzemeltetéséhez, így mi is ezt használjuk a következőkben.
+
+Az időzítendő függvényünk lesz a játék főciklusa (*render loop* vagy *game loop*), aminek egyelőre a dolga a kép letörlése és önmaga időzítése.
+
+```javascript
+var gameLoop = function(){
+	window.requestAnimationFrame(gameLoop);
+	clearCtx();
+};
+
+gameLoop(); // Kell egy legelső hívás, hogy elinduljon a ciklus
+```
+
+A böngészőben most egy világos szürke vásznat kell látnunk. Bár ez még nem látványos, tudnunk kell, hogy ez a ciklus lesz minden alapja.
+
 3. A játékvilág és rajzolás a canvas-en
 ---------------
 
