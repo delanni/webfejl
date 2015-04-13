@@ -161,7 +161,7 @@ Mint látható, a render ciklusban a világ állapotaként tárolt objektumokon 
 
 A statikus világból a mozgó világba úgy jutunk el, ha az előző, rajzolási módszer analógiájára elkészítjük az animálhatók tömbjét, és a render ciklusban ezen is végigsétálunk. Tároljuk tehát az összes mozgatható, animálható element egy tömbben a világ objektumunkon. Ezt ugye gond nélkül megtehetjük, és egy elemet (például az előző négyzetünket) belehelyezhetünk egyszerre a rajzolhatók és az animálhatók tömbjébe is, mert a javascript objektumokról tetszőleges referenciát készíthetünk. (Hiszen amikor tömbökbe teszünk egy objektumot, akkor az igazi objektum a memóriában csak egy példányban él, de több helyről hivatkoznak ugyanarra az egy objektumra).
 
-Tehát egy újabb tömb (1) a világon, egy újabb függvény (2) a négyzeten, és egy újabb ciklus (3) a játék főciklusában. Ez utóbbi a (2) függvényt hívogatja miközben az (1) elemein megy végig sorban. Továbbá a négyzet (4) objektumunkat úgy turbózzuk fel, hogy ő tárolja magáról, hogy hol és hogyan létezik, a _drawTo_ ez alapján rajzolja majd ki, és az ő _animate_ ezen tulajdonságait változtathatja.
+Tehát egy újabb tömb (1) a világon, egy újabb függvény (2) a négyzeten, és egy újabb ciklus (3) a játék főciklusában. Ez utóbbi a (2) függvényt hívogatja miközben az (1) elemein megy végig sorban. Továbbá a négyzet (4) objektumunkat úgy turbózzuk fel, hogy ő tárolja magáról, hogy hol és hogyan létezik, a _drawTo_ ez alapján rajzolja majd ki, és az _animate_ ezen tulajdonságait változtathatja.
 
 ```javascript
 var world = {
@@ -195,7 +195,11 @@ square.animate = function(time){
 // ...
 // Tegyük a négyzetet az animálhatók tömbjébe is, hogy a ciklus őt se hagyja ki.
 world.animatables.push(square);
+```
 
+Nézzük, hogyan változik a főciklusunk, ha már animálnia is kell a világban élő egyedeket.
+
+```javascript
 var gameLoop = function(){
 	window.requestAnimationFrame(gameLoop);
 	clearCtx();
@@ -253,4 +257,4 @@ A következő lépésben több példánnyal fogunk dolgozni, és ezekhez osztál
 
     
 
-_A leírást készítette: Szabó Alex, <time datetime="2015-04-10 19:00">2015</time>_
+_A leírást készítette: Szabó Alex, `<time datetime="2015-04-10 19:00">2015</time>_`
