@@ -125,7 +125,7 @@ var world = {
 // Négyzet objektum, egy függvénye van, a drawTo
 // abban mondja meg magáról az objektum, hogy ŐT hogyan és hova kell kirajzolni
 var square = {
-    square.drawTo : function(context){
+    drawTo : function(context){
         // Hexa formátumban megadott színinfó
         context.fillStyle = "#eb01aa";
         // x, y, szélesség, hosszúság
@@ -158,6 +158,68 @@ Mint látható, a render ciklusban a világ állapotaként tárolt objektumokon 
 
 4. Játékelemek animációja
 ---------------
+
+A statikus világból a mozgó világba úgy jutunk el, ha az előző, rajzolási módszer analógiájára elkészítjük az animálhatók tömbjét, és a render ciklusban ezen is végigsétálunk. Tároljuk tehát az összes mozgatható, animálható element egy tömbben a világ objektumunkon. Ezt ugye gond nélkül megtehetjük, és egy elemet (például az előző négyzetünket) belehelyezhetünk egyszerre a rajzolhatók és az animálhatók tömbjébe is, mert a javascript objektumokról tetszőleges referenciát készíthetünk. (Hiszen amikor tömbökbe teszünk egy objektumot, akkor az igazi objektum a memóriában csak egy példányban él, de több helyről hivatkoznak ugyanarra az egy objektumra).
+
+Tehát egy újabb tömb (1) a világon, egy újabb függvény (2) a négyzeten, és egy újabb ciklus (3) a játék főciklusában. Ez utóbbi a (2) függvényt hívogatja miközben az (1) elemein megy végig sorban. Továbbá a négyzet (4) objektumunkat úgy turbózzuk fel, hogy ő tárolja magáról, hogy hol és hogyan létezik, a _drawTo_ ez alapján rajzolja majd ki, és az ő _animate_ ezen tulajdonságait változtathatja.
+
+```javascript
+var world = {
+	drawables: [],
+	// Olyan objektumokat várunk, akiken van egy .animate(time:number) függvény, amit a szimuláció során meghívhatunk
+	animatables: [] // (1)
+};
+
+// Az objektumunknak tárolnia kell, hogy pl. hol van, hogy azt körről körre tudjuk rajta animálni  
+// (4)
+var square = {
+	position : [100,100],
+	size : [30,30]
+};
+
+// A függvényeket a következő módon is elhelyezhetjük az objektumon, miután az már elkészült:
+square.drawTo = function(context){
+	context.fillStyle = "#eb01aa";
+    // A kirajzolás az aktuális állapotot tükrözi, a négyzet helye és mérete szerint
+    context.fillRect(this.position[0], this.position[1], this.size[0], this.size[1]);
+};
+
+// Definiáljuk az animáló függvényt, ami most véletlenszerű mozgatás
+// (2)
+square.animate = function(time){
+	// Véletlenszerű mozgás egy kicsit a +x +y irányba tolva
+	this.position[0] += Math.random()-0.4; 
+	this.position[1] += Math.random()-0.4;
+};
+
+// ...
+// Tegyük a négyzetet az animálhatók tömbjébe is, hogy a ciklus őt se hagyja ki.
+world.animatables.push(square);
+
+var gameLoop = function(){
+	window.requestAnimationFrame(gameLoop);
+	clearCtx();
+	
+    // (3)
+	for(var i=0;i<world.animatables.length;i++){
+        var animatable = world.animatables[i];
+        animatable.animate(); // bár most még nem adunk át időt, mert nem fontos
+    }
+
+	for(var i=0;i<world.drawables.length;i++){
+		var drawable = world.drawables[i];
+		drawable.drawTo(ctx);
+	}
+};
+
+```
+
+Ha ezek után elindítjuk az _index.html_-ünket, láthatjuk, hogy az animáció sikeres, hiszen képkockánként megmozdul valamilyen irányba egy kicsit a négyzet. Tehát megtörténik az animáció, a törlés és az újrarajzolás.
+
+_Megjegyzés:_ Azt, hogy az animálhatók tömbjébe (_animatables_) csak olyanok kerüljenek, akiken van _animate_ függvény, a mi felelősségünk betartani. A javascript nem statikusan típusos nyelv, tehát megengedi nekünk, hogy olyan objektumokkal tegyük tele, amelyeken nincs semmiféle függvény, és így persze a kódunk hibát is okozhatna. Ezért figyeljünk, hogy ne helyezzünk olyan objektumokat ebbe a tömbbe, amelyeken nincs _animate_ függvény. (hasonlóképp a _drawables_ tömbben is csak olyasvalakik legyenek, akiknek van _drawTo_ függvényük).
+
+A következő lépésben több példánnyal fogunk dolgozni, és ezekhez osztályokat is gyártunk.
+
 
 5. Vektor és négyzet osztályok, példányosítás
 ---------------
