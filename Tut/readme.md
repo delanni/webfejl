@@ -114,7 +114,7 @@ Kezdjünk el objektumokat gyártani! Gyakori megközelítés a játékoknál, ho
 
 Készítsünk tehát egy világ objektumot, ez az objektum tartalmazzon egy tömböt, aki nyilvántartja az összes kirajzolható entitást. Ezeken fogunk végigiterálni a render ciklusban, és rajzoljuk ki egyesével őket.
 
-Majd pedig készítsünk egy négyzet objektumot, amely kirajzolható, ezért tegyünk rá egy _drawTo_ függvényt, amely paraméterül kap egy kontextust, és kirajzolja rá a négyzetet, valahogyan, akárhogyan.
+Majd pedig készítsünk egy négyzet objektumot, amely kirajzolható, ezért tegyünk rá egy _drawTo_ függvényt, amely paraméterül kap egy kontextust, és kirajzolja rá a négyzetet, valahogyan, akárhogyan. Az objektum literálokról [itt](http://www.dyn-web.com/tutorials/object-literal/) találhattok rövid leírást. Lényegében annyit kell tudni róla, hogy értékek halmazát tárolhatjuk egy objektumban, és minden értéket a saját kulcsa különböztet meg. Készítéskor a literál szintaxissal a {} jelek közt kulcs:érték felsorolást teszünk, és ezek lesznek elérhetők egy objektumon.
 
 ```javascript
 // Világ objektum, egy tulajdonsága van, drawables, ami egy üres lista, tömb
@@ -228,6 +228,111 @@ A következő lépésben több példánnyal fogunk dolgozni, és ezekhez osztál
 5. Vektor és négyzet osztályok, példányosítás
 ---------------
 
+Ha az előzőekben megjelenített, és animált négyzeteinkből többet szeretnénk létrehozni, akkor csinálhatjuk azt, hogy a felépített objektumot egyszerűen egy ciklusban gyártjuk, és így sok hasonló objektumot tudunk elkészíteni, de egy kézenfekvőbb, és elfogadottabb megközelítés, ha készítünk egy "osztályt" erre. Az objektumorientált programozási nyelvekből ismert osztályoknak a javascriptben igazából nincs megfelelője, hiszen a javascript nem osztályokat, hanem objektumokat, és nem leszármaztatásos öröklést, hanem prototípusokat használ. Ezen fogalmak kifejtése kicsit hosszas munka lenne, de aki valóban szeretne foglalkozni a nyelvvel, érdemes utánanéznie. 
+
+Mi a következőkben úgy fogjuk szimulálni az OO nyelvek osztályait, hogy használatuk hasonló legyen. Erre a szimulációra a javascript némi támogatást is ad, névlegesen: ha egy függvényt úgy használunk mint osztályt, akkor az a függvény lehet az osztályunk konstruktora. A konstruktor pedig, mint tudjuk arra való, hogy példányokat gyártsunk egy osztályhoz. Az osztály szintű közös viselkedést pedig a konstruktorfüggvény prototípusán implementált függvényekkel fogjuk tudni megoldani, ugyanis, ha egy függvény prototípusán megjelenik egy érték (legyen az szám, szöveg, vagy éppen függvény), akkor az az összes példányon elérhető. Ha még nem érted, akkor próbáld a kód alapján megérteni.
+
+Például elkezdhetünk implementálni egy Vektor osztályt a nulláról, ami például alap Vektor műveleteket fog tudni megoldani. Mire jó ez? A játékok általában 2D vagy 3D vektorokkal operálnak, hogy a pozíciókat, sebességeket, és egyéb vektormennyiségeket karban tudjanak tartani. Ráadásul könnyű is! Az összes művelet pontosan úgy működik, ahogy azt középiskolában megtanultuk.
+
+A következő kódrészletet egy új _Vector.js_ fájlba helyeztem, amit az _index.html_-ben behivatkoztam, mint a _gameScript.js_-t.
+
+```javascript
+// Konstruktor függvény definiálásával kezdjük
+var Vector = function(x,y){
+	this.x = x || 0;
+	this.y = y || 0;
+};
+
+// Vektorműveletek definiálása a prototípuson
+
+// Pl. a vektor eltolása
+Vector.prototype.addInPlace = function(other){
+	this.x += other.x;
+	this.y += other.y;
+	return this;
+};
+
+// Pl a hossz kiszámítása Pitagorasz-tétellel
+Vector.prototype.length = function(){
+    return Math.sqrt(this.x*this.x + this.y*this.y);
+};
+
+// pl véletlenszerű vektor generálása
+Vector.random = function(scaleX, scaleY){
+	if (arguments.length == 0){
+		scaleX = scaleY = 1;
+	} else if (arguments.length == 1){
+		scaleY = scaleX;
+	}
+
+	return new Vector((Math.random()-0.5)*scaleX,(Math.random()-0.5)*scaleY);
+};
+```
+
+Ezt a vektor osztályt később még kiterjesztjük, de ennyi egyelőre elég ahhoz, hogy megoldjuk a játékunk jelenlegi szükségleteit.
+
+Kényelmi okokból egészítsük ki a világ objektumunkat egy aprósággal. Azzal, hogy egy függvénnyel egyszerre az összes tároló tömbhöz hozzá tudjuk adni a rajzolandó és animálandó példányokat, készítsünk egy egyszerű insert függvényt.
+
+```javascript
+var world = {
+	// Csináljunk egy függvényt ami egyszerre több helyre is beszúrja az elemet
+	insert : function(entity, asDrawable, asAnimatable){
+		world.entities.push(entity);
+		if (asDrawable) world.drawables.push(entity);
+		if (asAnimatable) world.animatables.push(entity);
+	},
+	entities: [],
+	drawables: [],
+	animatables: []
+};
+```
+
+Végül készítsük el az eddigi 1 darab négyzetünk mintájára az osztályt, ami sok hasonló négyzetet tud majd paraméterezetten generálni. Ehhez is a függvény-osztály szintaxist használjuk mint az előbbiekben. Ezt a kódrészletet ott készítettem el, ahol eddig az 1 db négyzetet gyártottuk le:
+
+```javascript
+
+// Javascriptben a függvény akár konstruktor függvényként is szolgálhat objektumok gyártására
+var Square = function(x,y,size, color){
+	this.position = new Vector(x,y);
+	this.size = size;
+	this.color = color ||  "#eb01aa";
+};
+
+// Ugyanazokat a függvényeket, amiket eddig 1 darab négyzet objektumra tettünk rá, most a prototípust képző objektumra tehetjük. 
+// Ennek hatására az összes példányon megjelenik
+Square.prototype.drawTo = function(context){
+	context.fillStyle = this.color;
+	context.fillRect(this.position.x,this.position.y,this.size, this.size);
+};
+Square.prototype.animate = function(time){
+	this.position.addInPlace(Vector.random());
+};
+
+```
+
+Miután készen áll az új Square (négyzet) osztályunk, példányosíthatunk belőle kettőt, vagy sokat is, amelyek hasonlóan fognak viselkedni, mint az előző 1 darab.
+
+```javascript
+// Most már példányosíthatjuk bármilyen paraméterekkel több példányként is a négyzetünk
+var square = new Square(100,100,30);
+var square2 = new Square(150,150, 20, "#40ef30");
+
+// használjuk a world új függvényét:
+world.insert(square,true,true);
+world.insert(square2,true,true);
+
+// Akár sok objektumot is beszúrhatunk véletlenszerűen:
+for(var i=0; i<50; i++){
+	var sq = new Square(Math.random()*cWidth,Math.random()*cHeight, 
+			15, "#9999" + Math.floor(Math.random()*10) + Math.floor(Math.random()*10));
+	world.insert(sq,true, true);
+}
+```
+
+Ha ezután elindítjuk a játékot, látjuk, hogy sok négyzet példány megjelent a képen, és izegnek-mozognak. Ezzel megtanultuk az osztályok és a példányosítás alapjait. Ezt akkor érdemes használni, tehát, ha sok hasoló viselkedésű objektumot szeretnénk csinálni a játékban (pl.: pénzérmék, ellenségek, lövedékek).
+
+Ez utóbbi szintaxis már kezd eléggé hasonlítani a C#-ban megszokottakhoz. A nagybetűs függvényeket (Vector, Square) úgy használhatjuk, mintha osztályokat jelképeznének, és a _new_ kulcsszóval példányosíthatjuk őket.
+
 6. Inputkezelés
 ---------------
 
@@ -257,4 +362,4 @@ A következő lépésben több példánnyal fogunk dolgozni, és ezekhez osztál
 
     
 
-_A leírást készítette: Szabó Alex, `<time datetime="2015-04-10 19:00">2015</time>_`
+_A leírást készítette: Szabó Alex, `<time datetime="2015-04-10 19:00">`2015`</time>`_
