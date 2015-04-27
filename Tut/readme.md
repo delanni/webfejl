@@ -328,13 +328,168 @@ for(var i=0; i<50; i++){
 	world.insert(sq,true, true);
 }
 ```
-
-Ha ezután elindítjuk a játékot, látjuk, hogy sok négyzet példány megjelent a képen, és izegnek-mozognak. Ezzel megtanultuk az osztályok és a példányosítás alapjait. Ezt akkor érdemes használni, tehát, ha sok hasoló viselkedésű objektumot szeretnénk csinálni a játékban (pl.: pénzérmék, ellenségek, lövedékek).
-
 Ez utóbbi szintaxis már kezd eléggé hasonlítani a C#-ban megszokottakhoz. A nagybetűs függvényeket (Vector, Square) úgy használhatjuk, mintha osztályokat jelképeznének, és a _new_ kulcsszóval példányosíthatjuk őket.
+
+Ha ezután elindítjuk a játékot, látjuk, hogy sok négyzet példány megjelent a képen, és izegnek-mozognak. Ezzel megtanultuk az osztályok és a példányosítás alapjait. Ezt akkor érdemes használni, tehát, ha sok hasoló viselkedésű objektumot szeretnénk csinálni a játékban (pl.: pénzérmék, ellenségek, lövedékek). A következő lépés? Valahogy próbáljunk interaktivitást vinni a demónkba.
 
 6. Inputkezelés
 ---------------
+
+Ebben a fejezetben minimális inputkezelést fogunk megvalósítani olyan formában, hogy a kis négyzetek az egér pozíciója felé mozognak.
+Első lépésként mozgassuk át a négyzetünket definiáló kódrészleteket egy külön fájlba, hogy ne piszkítsuk vele a _gameScript.js_ fájljainkat.
+
+Egyúttal ki is egészíthetjük a négyzetünket két új tulajdonsággal, azzal hogy mi a sebessége, és azzal, hogy mi a gyorsulása. Középiskolás fizikával pedig ki tudjuk számolni ezek közt az összefüggést: a sebesség minden körben nő az idő és a gyorsulás szorzatával, a pozíció pedig minden körben változik a sebesség és az idő szorzatával. (Δv = t*a, és Δx = t*v)
+Tehát készítsünk, és hivatkozzunk be egy Square.js fájlt a következő tartalommal:
+
+```javascript
+var Square = function(x,y,size, color){
+	this.position = new Vector(x,y);
+	this.size = size;
+	this.color = color ||  "#eb01aa";
+
+	this.speed = new Vector();
+	this.acceleration = new Vector();
+};
+
+Square.prototype.drawTo = function(context){
+	context.fillStyle = this.color;
+	context.fillRect(this.position.x,this.position.y,this.size, this.size);
+};
+
+Square.prototype.animate = function(time){
+    // Paraméterül kapja, hogy mennyi a Δt
+    // (Δv = Δt*a, és Δx = Δt*v)
+	this.speed.addInPlace(this.acceleration.scale(time/1000));
+	this.position.addInPlace(this.speed.scale(time/1000));
+};
+```
+
+Ezt letudtuk. A megtisztított _gameScript.js_-ünket 4 helyen egészítjük ki kóddal:
+  1. Csak a generált négyzeteket hagyjuk benne
+  2. A szimulációhoz minden körben kiszámítjuk az eltelt időt, és ezt átadjuk az animate függvényeknek, hogy a testek időarányosan mozogjanak
+  3. Elkészítünk egy az egér és billentyűzet modellezésére alkalmas objektumot, amit eseménykezelőből frissítünk.
+  4. A világ objektumunkon elkészítünk egy függvényt, ami valahogy kezeli az előző pont beli egér-modell állapotát.
+  
+(1). Most nincs szükség a külön generált példányokra, megtarthatjuk csak azt az 50 véletlenszerűt, akit a Square osztályból generálunk.
+```javascript
+var colors = ["#a171ca", "#0a46c1", "#99ea49", "#abac0a"];
+var squares = [];
+for(var i=0; i<50; i++){
+    // Új négyzet készítése
+	var sq = new Square(Math.random()*cWidth,Math.random()*cHeight, 15, colors[i%4]);
+    // Amit beszúrunk a világunkba
+	world.insert(sq,true, true);
+    // És lementjük egy külön tömbbe, majd ezt fogja elérni az input kezelő függvény.
+    squares[i] = sq;
+}
+```
+
+(2). Ahhoz, hogy az eltelt idővel tudjuk arányosítani a mozgásokat, ki kell számolnunk, hogy mennyi idő telt el a legutóbbi képkocka óta. Ha stabilan, és fixen mindig 60FPS-sel menne a játék (60 képkocka másodpercenként) akkor 1000/60=16.6ms jutna minden egyes képkockára, és nem kellene számítgatnunk. De ez a szám változik a gép aktuális terheltségének függvényében, ezért ki kell számítanunk minden render-ciklusban. Ezt a következőképp tehetjük meg:
+```javascript
+// Ebben tároljuk, hogy mennyi volt a legutóbbi értéke a t-nek
+var lastT = 0;
+
+var gameLoop = function(t){
+    // A gameLoop függvényünk paraméterét a requestAnimationFrame fogja adni. Ez a t mindig azt az időt mutatja, hogy mennyi ideje megy már a játék. Amit tennünk kell, hogy tároljuk a legutóbbi t értékeket, és kivonjuk az aktuálisból. Így megkapjuk a deltát.
+	if (lastT == 0){
+        // Ha eddig még nem volt soha, akkor hazudjuk, hogy a legelső képkocka 16ms volt.
+		var delta=60/1000;
+		lastT = t;
+	} else {
+        // Különben számítsuk ki a két t különbözetét
+		delta = t - lastT;
+        // És tároljuk le a legutóbbi t-t
+		lastT = t;
+	}
+    
+    window.requestAnimationFrame(gameLoop);
+	
+	clearCtx();
+
+	/** itt hívjuk meg a majd 4. részben elkészülő függvényt **/
+	world.handleInputs(mouse,keyboard);    
+    
+	for(var i=0;i<world.animatables.length;i++){
+        var animatable = world.animatables[i];
+        // Itt használjuk fel a kiszámított deltát
+        animatable.animate(delta);
+    }
+
+	for(var i=0;i<world.drawables.length;i++){
+		var drawable = world.drawables[i];
+		drawable.drawTo(ctx);
+	}
+    
+}
+```
+
+(3). Egy virtuális egér objektumban tároljuk és frissítjük, hogy hol volt legutóbb az egér pozíciója, és hogy nyomták-e a gombot. Ez sokkal egyszerűbb mint aminek hangzik. Egy egyszerű javascript objektum kell hozzá, és egy eseménykezelő, ami frissítgeti az egér értékét.
+```javascript
+
+/** Feliratkozunk mindenféle egér eseményekre, aminek állapotát tároljuk egy állapotváltozóban **/
+var mouse = {
+	x:0,
+	y:0,
+	left:false,
+	right:false
+};
+// A vászonra tehetünk egy eseménykezelőt, ami minden mozgatá eseménynél frissíti a tárolt egérpozíciót.
+canvas.onmousemove = function(ev){
+    // Azért hogy Chrome-on és Firefoxon is megbízhatóan működjön, így kell megoldani:
+    var rect = canvas.getBoundingClientRect();
+	mouse.x = ev.offsetX || ev.clientX - rect.left;
+	mouse.y = ev.offsetY || ev.clientY - rect.top;
+};
+
+/** Megelőlegezhetjük ezt a billentyűzetre is **/
+var keyboard = {};
+
+```
+
+(4). Végül kell egy függvény, akit már a 2. lépésben meghívtunk. Ő az aki minden ciklusban ránéz az egér állapotára, és az alapján eldönti, hogy mit kell változtatni a világon. A mi esetünkben nem történik semmi bonyolult, csak az egér pozíciója felé fogjuk mozgatni a négyzeteket.
+
+```javascript
+    // Ez a függvény kerül a világ objetumunkra
+
+    var world = {
+    //...
+    handleInputs : function(mouse,keyboard){
+        // Először vegyük az egérpozíció helyvektorát
+		var mousePos = new Vector(mouse.x,mouse.y);
+
+		// Iteráljunk végig az összes elemen
+		for(var i=0; i< world.entities.length; i++){
+			// Vegyük ki az aktuális elemet
+			var entity = world.entities[i];
+			// S ha ez az elem bizony egy négyzet
+			if (entity instanceof Square){
+				// Akkor annak sebessége legyen a pozíciójából az egér helyvektorához húzott vektor
+				// Ezt vektoralgebrában egyszerű kivonással megoldhatjuk
+				entity.speed = mousePos.subtract(entity.position);
+			}
+		}
+	   }
+    };
+```
+
+Előbbiekhez még két kiegészítést tehetünk a Vector osztályunkban, hogy létezzen _.subtract_ függvényünk, és _.scale_ függvényünk. Ezek, nem úgy mint az _.addToSelf_, nem módosítják a vektort akin hívjuk, hanem új vektorokat gyártanak le. Első a különbségvektort állítja elő, a második pedig a megnyújtott másolatát. Így néznek ki:
+
+```javascript
+
+// A Vector.js fájlban, csatoljuk az új függvényeket a prototípusra, így minden Vector példányon meg fog jelenni.
+Vector.prototype.subtract = function(other){
+	return new Vector(this.x - other.x, this.y - other.y);
+};
+
+Vector.prototype.scale = function(scaler){
+	return new Vector(this.x * scaler, this.y * scaler);
+};
+
+``` 
+Ha mindennel végeztünk, fújjuk ki magunkat, és gondoljuk át, mi is amit megvalósítottunk: egy virtuális egér objektumban tároljuk az egér legutóbbi ismert helyét, és a világ szimulációja során, minden egyes képkocka kirajzolása előtt az egér pozíciója felé gyorsítjuk a négyzeteinket.
+
+Ha már értjük mit csináltunk, próbáljuk ki, hogy valóban az történik-e amit vártunk.
+
 
 7. Pszeudo-fizikai megközelítés
 ---------------

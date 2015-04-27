@@ -91,8 +91,9 @@ var mouse = {
 	right:false
 };
 canvas.onmousemove = function(ev){
-	mouse.x = ev.offsetX;
-	mouse.y = ev.offsetY;
+    var rect = canvas.getBoundingClientRect();
+	mouse.x = ev.offsetX || ev.clientX - rect.left;
+	mouse.y = ev.offsetY || ev.clientY - rect.top;
 };
 /** Megelőlegezhetjük ezt a billentyűzetre is **/
 var keyboard = {};
