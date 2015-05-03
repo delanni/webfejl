@@ -1,6 +1,6 @@
 /**
- * Ez egy robbanáb objektumot képviselő osztály.
- * Azt tudja, hogy beállítás után, egyfüggvényhívás hatására felrobban,
+ * Ez egy robbanás objektumot képviselő osztály.
+ * Azt tudja, hogy beállítás után, egy függvényhívás hatására felrobban,
  * amivel négyzeteket ad a világhoz a robbanás irányának megfelelően
  * **/
 

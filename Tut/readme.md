@@ -5,7 +5,10 @@ A következőkben egy meglehetősen hosszú cikkben végigviszem egy egyszerű H
 
 A javascript a böngészők által futtatott scriptnyelv/programozási nyelv. A legfőbb használati területe a weboldalak interaktívvá tétele felhasználói input kezeléssel, animációval, és programozott eseményekkel. A javascript futtatómotorok kifinomultságának köszönhetően olyan jó végrehajtási sebességgel rendelkeznek a böngészők, hogy játékokat is készíthetünk kizárólag kliens oldali kóddal. A játékok javascript kód formájában íródnak, és megjelenítéshez a HTMLCanvasElement példányait, a \<canvas\> elemeket használják.
 
-Az elkészülő játék egy egyszerű ügyességi játék lesz, amiben egy tankkal kell repülőket lelőni. A játék esztétikai célból némi fizikát és részecskerendszert is tartalmaz, a játéklogikához szükséges mozgatás, megjelenítés és ütközésdetektálásokon kívül. A fejlesztés 14 nagyobb lépésben történik. Ezek sorban a következők:
+Az elkészülő játék egy egyszerű ügyességi játék lesz, amiben egy tankkal kell repülőket lelőni. A játék esztétikai célból némi fizikát és részecskerendszert is tartalmaz, a játéklogikához szükséges mozgatás, megjelenítés és ütközésdetektálásokon kívül.
+A játék elkészítését azzal vezetjük fel, hogy felépítünk egy világot, ami otthont képes adni jópár hasonló játéknak, hiszen kezelni fog néhány alapvető fizikai törvényt, és látványos hatást. Ez az általános fejlesztési rész a 9. fejezetig tart, utána átalakítjuk úgy, hogy a fent említett ügyességi játék legyen.
+
+A fejlesztés 14 nagyobb lépésben történik. Ezek sorban a következők:
 
 1. [A projekt alapjai](#1-a-projekt-alapjai)
 2. [A canvas és a renderloop alapjai](#2-a-canvas-%C3%A9s-a-renderloop-alapjai)
@@ -721,9 +724,238 @@ Square.prototype.drawTo = function(context){
 
 Ha mindezzel végeztünk, megint pihenjünk rá, és nézzük meg munkánk eredményét. Ezúttal már egy játékhoz hasonló kis demót kaptunk, ahol rugalmas (látható, vagy láthatatlan, a bónusz lépéstől függ) fonalon lengethetünk négyzeteket, amely fonalat, ha elengedünk, a négyzetek lezuhannak.
 
-
 9. Ágyú és robbanások
 ---------------
+Gondolom, ha eddig volt türelmed eljutni a tutorialban, akkor neked is megfordult a fejedben, hogy milyen játékot lehetne ezekből az eszközökből, ezekkel a mechanikai elemekkel összerakni. Most még egy utolsó effektet bevezetünk, amivel tovább bővítjük a keretrendszerünket, ami végül otthont fog adni egy játéknak, amiről bővebben a következő részben írok.
+
+Most tehát még egy effektust vezetünk be, ami kicsit testes (sok kód kell hozzá), de annál látványosabb, és sokban feldobja a játékunkat. 
+
+Ez az effektus egy robbanás szerű részecskerendszer lesz. Fel kell használjuk az eddigi négyzeteinket, amik engedelmeskednek a gravitációs törvényeknek, és valahogyan keretbe szervezzük őket, hogy vezényszóra lehessen őket generálni.
+
+Az effektus velejében annyit csinál, hogy legyárt egy halom olyan négyzetet, amelyek minimálisan variáltak a paramétereiket tekintve, és ezeket egy kezdősebességgel elindítja egy irányba. Ennnek az lesz a hatása, hogy egy robbanás szerű látványt kapunk, törmelék vagy füst részecskékkel. Ezt még annyira általánosra csináljuk, hogy később több helyen lehessen használni megfelelő paraméterezéssel.
+
+_Megjegyzés: a kódbázis már elég nagy kezd lenni, így jó, ha átnézed, és megérted, mielőtt folytatod a kódrészletek átmásolását._
+
+Fontos, hogy emlékezzünk, hogy a Square, négyzet osztályunk milyen módon paraméterezhető és készíthető, mert a robbanás ezeket a négyzeteket, vagy általánosabb nézetben részecskéket fogja használni alap építőelemeiként (általánosabban, hiszen csinálunk pl. egy kör osztályt, ami csak kinézetében különbözik a négyzettől).
+
+Továbbá fontos, hogy emlékezzünk, hogy a javascriptben a függvények is objektumok. Tehát paraméterül lehet adni egy darab függvényt egy másiknak, aki meg tudja hívni az előbbit, és tudja használni annak a hívásnak az eredményét. Ezt a nyelvi tulajdonságot is használni fogjuk a következőkben.
+
+Áttekintésként, ezt nem kell sehova írni:
+```javascript
+// Így hozunk létre egy új négyzetet:
+new Square(40,50,{      size: 3,
+						color: colors[3],
+						friction: 0.05 + Math.random() * 0.001,
+						world: world,
+						mass: Math.random()
+					});
+// ahol a paraméterek az x, y koordináták, és a paraméter objektum, ami nevesítve tartalmazza a tulajdonságokat
+
+// Így hozunk létre és adunk paraméterül egy függvényt egy másiknak:
+// Egy függvény, ami visszaadja a megadott paraméter kétszeresét
+var fn1 = function(x){
+ return 2*x;
+};
+
+// Egy függvény, ami 2 paramétert vár, az első egy függvény
+var fn2 = function(a,b){
+  // és meghívja az első függvényt a második paraméterrel
+ var aResult = a(b);
+  // majd visszaadja annak eredményét
+ return aResult;
+};
+
+fn2(fn1, 7); // tehát ennek a hívásnak a visszatérési értéke 14
+```
+
+Essünk tehát neki a robbanás osztály megtervezésének. A tervezés természetesen nem villámcsapásra megy, mint ahogy én a kódot megmutatom, hanem inkrementálisan fejlődik az osztály aszerint, hogy a hívó fél milyen tulajdonságokat és viselkedést vár el tőle. Én itt már csak azt tálalom, hogy az én logikám szerint mi lett ennek a tervezésnek az eredménye. Ehhez hozzunk létre egy új _Explosion.js_-t és azt húzzuk is be a szokásos módon az _index.html_-be.
+
+Egy az egyben bemásolom a fájl kívánt tartalmát, és a kommentekkel magyarázom a részeit:
+```javascript
+/**
+ * Ez egy robbanás objektumot képviselő osztály.
+ * Azt tudja, hogy beállítás után, egy függvényhívás hatására felrobban,
+ * amivel négyzeteket ad a világhoz a robbanás irányának megfelelően, ezek pedig szabadon esnek, és repülnek a világban
+ * **/
+
+// Konstruktor, paraméter objektummal
+var Explosion = function(options) {
+    // ha nincs semmi megadva, legyen üres obj. a par.obj.
+    options = options || {};
+    // A paraméterobjektum részei a következők:
+    
+    // A világ, ahova be kell tömni a létrejövő törmelék részecskéket
+    this.world = options.world;
+    // A kilövendő részecskéket be lehet adni egy tömb formájában
+    this.particles = options.particles || [];
+    // És be lehet adni generátor függvénnyel, ami legyártja őket
+    this.generator = options.generator;
+    // Meg lehet, és illik adni, hogy mennyi részecskét szeretnénk
+    this.particlesCount = options.particlesCount || this.particles.length || 0;
+    
+    // Ekkor, ha nincs annyi részecske a részecsketömbben (ami akár üres vagy hiányzó is lehetett) akkor a generátorfüggvénnyel gyártunk további darabokat
+    if (this.particles.length < this.particlesCount) {
+        // ha van generátorfüggvény
+        if (this.generator) {
+            // akkor hívogassuk addig, amíg nem lesz annyi a tömbben amennyit kértünk
+            while (this.particles.length < this.particlesCount) {
+                var newPart = this.generator();
+                this.particles.push(newPart);
+            }
+        }
+    }
+
+    // A kilövellés nyílási szélessége radiánokban
+    this.coneWidth = options.coneWidth || Math.PI * 2;
+    // A kilövellés elforgatása radiánokban a vízszinteshez képest
+    this.coneOffset = options.coneOffset || 0;
+
+    // A kilövellés minimum ereje és maximum ereje közt véletlen generálással kapnak sebességet a részecskék
+    this.strengthMin = options.strengthMin || 0;
+    this.strengthMax = options.strengthMax || 2;
+};
+
+// E függvény szolgál arra, hogy az előkészített robbanás objektumot elsüsse, és a robbanás tényleg megtörténjen
+Explosion.prototype.fire = function() {
+    // Minden részecskén végigsétálunk
+    for (var i = 0; i < this.particles.length; i++) {
+        var p = this.particles[i];
+        // Ha nincs sebessége
+        if (p.speed.length() == 0) {
+            // akkor generálunk neki egyet a nyílás paramétereinek megfelelően egy irányt
+            p.speed = Explosion._conal2(this.coneWidth, this.coneOffset);
+            // és abban az irányban a min és max sebesség közt állítunk be kezdősebességet véletlenszerűen
+            p.speed.scaleInPlace(Explosion._randbetween(this.strengthMin, this.strengthMax));
+        }
+        // végül a világhoz adjuk, így lefut a kirajzoló és animáló függvénye is minden körben, tehát megjelenik, és mozog.
+        this.world.insert(p, true, true);
+
+    }
+};
+
+// Ez a függvény szolgál arra, hogy a kilövellés nyílási szélessége és elforgatása szerint generáljon egy véletlenszerű irányt. Ha ez a nyílási szélesség 2pí, akkor bármilyen irányban repoülhet a részecske, különben egy tölcsér alak lesz
+Explosion._conal2 = function(width, offset) {
+    // Ennek a módja az, hogy csinálunk egy egységvektort, amit előbb eltolunk az elforgatáshoz, majd továbbtoljuk egy véletlenszerű értékkel a 0 és a nyílás paraméter közt. Ekkor van egy irányvektorunk, aminek az x és y koordinátája kell. 
+    
+    // Határozzuk meg a minimális elfordulást
+    var minRot = offset - width / 2;
+    // Adjunk hozzá valamennyi véletlen elfordulást, ami max a nyílás szélessége
+    var randomRot = minRot + Math.random() * width;
+
+    // Az x és y koordináták ennek az elfordulás vektornak cos és sin leképzettjei.
+    var x = Math.cos(randomRot);
+    var y = Math.sin(randomRot);
+    // Tekintve, hogy a HTMLCanvas lefelé növeli az Y koordinátát, ezt itt negáljuk
+    return new Vector(x, -y);
+};
+
+// Egy függvény egyszerű intervallum beli véletlen generálásra
+Explosion._randbetween = function(a, b) {
+    return Math.random() * Math.abs(a - b) + Math.min(a, b);
+};
+```
+Ez nagyjából lefedi az Explosion osztályt, ez az általános rész, most megnézzük hogy kell használni, és hogy hogy néz ki. Ismlétlem, természetesen én sem az olvasási sorrendnek megfelelően gépeltem be elsőre ezt az osztályt, hanem a használat helyén felmerülő igények szerint alakítottam ki, de nincs lehetőség sajnos a tutorial során az inkrementális tervezés folyamatát végigvezetni.
+
+Következő lépésben használjuk ezt az osztályt, ha már ilyen szépen megírtuk. A _gameScript.js_-ben a sokat módosítgatott _handleInputs_ függvényt kell a következőre alakítanunk, ahhoz, hogy kattintás hatására egy ágyúgolyót lőjünk az egér irányába:
+
+```javascript
+// A handleInputs függvény legyen ez:
+function(mouse, keyboard) {
+    // csináljunk az egér pozícióból egy vektort (vektorműveletekhez)
+    var mousePos = new Vector(mouse.x, mouse.y);
+    // Helyezzük el valahova az ágyút, pl a bal alsó sarokba, de bárhova lehet
+    var cannonpos = new Vector(0,cHeight);
+    
+    // Ha a gombot megnyomták, akkor:
+    if (mouse.left) {
+        // Csináljunk egy CIRCLE példányt az ágyúgolyónak
+        // Ez legyen ott ahol az ágyú van
+        var cannonBall = new Circle(cannonpos.x,cannonpos.y,{
+                    size: 10,
+                    color: colors[1],
+                    friction: 0.005,
+                    world: world,
+                    mass: 2,
+                    //  és sebessége legyen az egér felé mutató vektor
+                    speed: mousePos.subtract(cannonpos).scaleInPlace(2)
+                });
+        // Csináljunk egy függvényt, amivel a törmelék részecskéket le lehet generálni
+        var pixelGeneratorFn = function() {
+            // A függvény adjon vissza egy új négyzet példányt, randomizált tömeggel, és súrlódással
+                return new Square(cannonpos.x,cannonpos.y,{
+                    size: 3,
+                    color: colors[3],
+                    friction: 0.05 + Math.random() * 0.001,
+                    world: world,
+                    mass: Math.random()
+                });
+            };
+            
+        // készítsük el előre a paraméterobjektumot amit odaadunk az Explosion konstuktorának
+        var explosionParams = {
+            // A részecskék tömbje tartalmazza egyelőre az ágyúgolyót
+            particles: [cannonBall],
+            // De adjunk meg generátorfüggvényt h elő tudjunk állítani törmeléket
+            generator: pixelGeneratorFn,
+            world:world,
+            // 10 darabot
+            particlesCount: 10,
+            // 100 és 400 sebesség közt
+            strengthMin: 100,
+            strengthMax: 400,
+            // egy PI/6 (30fok) szögű nyílással
+            coneWidth:Math.PI/6,
+            // úgy elforgatva, hogy az egér pozíció felé mutasson
+            coneOffset: Math.atan2(-mousePos.subtract(cannonpos).y, mousePos.subtract(cannonpos).x)
+        };
+        
+        // Készítsük el a robbanás példányt az előzőleg összeállított paraméterekkel
+        var explosion = new Explosion(explosionParams);
+
+        // majd süssük is el, hogy lássuk a hatását 
+        explosion.fire();
+        // nullázzuk le a kattintás jelző változót, hogy csak 1 robbanást süssünk el egy kattintással
+        mouse.left=0;
+    }
+}
+```
+Miután ismét megújítottuk a _handleInputs_ képességeit, tisztázzuk le az egér állapot kezelését a következőképp:
+```javascript
+// Az összetett eseménykezelő helyett, amit a 8. fejezetben csináltunk legyen 3 egyszerűbb eseménykezelő a triviális állapotváltozásokra
+
+canvas.onmousedown = function(){
+	mouse.left = 1;
+};
+
+canvas.onmouseup = function(){
+	mouse.left = 0;
+};
+
+canvas.onmousemove = function(ev) {
+	var rect = canvas.getBoundingClientRect();
+	mouse.x = ev.offsetX || ev.clientX - rect.left;
+	mouse.y = ev.offsetY || ev.clientY - rect.top;
+};
+```
+Huh, a sok kódmásolgatás és *értelmezés* végére már csak egy apróság maradt. Az ágyúgolyóhoz egy Circle osztályt példányosítottam, ami nem létezik, de könnyen orvosolható. A körök a megjelenésükön kívül minden másban teljesen azonosan viselkednek a négyzetekkel. Ezért megtehetjük pl. azt, hogy egy az egyben lemásoljuk, és átnevezgetjük a _Square.js_-t, és a benne lévő változókat egy _Circle.js_-nek megfelelően, illetve be is hivatkozzuk azt az _index.html_-ben.
+
+Az egyetlen hely, ahol meg kell változtatni a Circle osztályt:
+```javascript
+// Az az, hogy máshogy kell kirajzolni, mint a négyzetet
+Circle.prototype.drawTo = function(context){
+	context.fillStyle = this.color;
+    // Kezdjünk egy új útvonalat rajzolni
+	context.beginPath();
+    // Rajzoljunk egy körívet, ami 0 pozícióból 2*PI-ig megy, tehát teljes kör lesz
+	context.arc(this.position.x,this.position.y, this.size/2, 0, 2*Math.PI);
+    // Majd kihúzás helyett töltsük fel azt
+	context.fill();
+};
+```
+
+Ha nem rontottunk el semmit, és én sem felejtettem el semmit, akkor ez a demó már egy elég jól kinéző demó, ami ágyúgolyókat lő az egér irányába, és azt látványossá teszi füst-(és/vagy)-törmelék részecskékkel. A paraméterekkel próbálkozhatsz, hogy sajátos kinézetet kapj.
+
+A következő részben az eddig felépített dolgok használatával, és testreszabásával fogunk egy minimális játéklogikát megvalósítani.
 
 10. Játék alapok - A tank
 ---------------

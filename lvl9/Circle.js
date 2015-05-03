@@ -15,7 +15,6 @@ var Circle = function(x,y, options){
 	this.speed  = options.speed || new Vector();
 	this.acceleration = options.acceleration || new Vector();
 
-	// Vezessük be a tömeg jelenlétét, hogy a gravitációs eséshez tudjuk használni
 	this.mass = options.mass;
 	this.friction = options.friction || 0;
 	this.maxSpeed = Circle.SPD_MAX;
@@ -42,7 +41,7 @@ Circle.prototype.animate = function(time){
 };
 
 Circle.prototype.clone = function() {
-	var c = new Square();
+	var c = new Circle();
 	var k = Object.keys(this);
 	for (var i = 0 ; i < k.length; i++){
 		if (this[k[i]].clone){
