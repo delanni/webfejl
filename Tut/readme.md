@@ -959,6 +959,241 @@ A következő részben az eddig felépített dolgok használatával, és testres
 
 10. Játék alapok - A tank
 ---------------
+A játék tehát egy ügyességi játék lesz, amelyben repülő ellenségeket kell lelövöldözni a földön mozgó tankunkból. Ebben a fejezetben létrehozzuk a játékost képviselő tankot, megoldjuk annak irányítását, javítunk a részecskék memória- és processzorhasználatán, és használjuk az előzőekben elkészített robbanást, mint a játékos fegyverét.
+
+A legegyszerűbb lépéssel kezdem, a tisztogatással. Az előző demóban látható volt, hogy amikor kilőttünk valamit, a robbanással keletkező törmelék és ágyúgolyó valószínűleg soha nem került kitörlésre a világból, ezért sok lövés után a render-ciklus akár részecskék ezreit is animálni és rajzolni volt kénytelen. Ez nyilvánvaló pazarlás, hiszen nincs szükség a részecskéknek örök életre. A következőkben a Circle és Square osztályokon bevezetünk egy _.life_ változót, amellyel szabályozhatjuk meddig éljenek a részecskék.
+
+Tehát mind a Square.js-ben, mind a Circle.js-ben az analóg módon megfelelő részeken vigyük fel a következőt:
+```javascript
+// Tehát a Circle és a Square osztályokban is!
+
+// A konstruktorban:
+// Átvesszük a paraméterobjektumról az entitás élethosszát, ha más nincs, akkor végtelen életű
+	this.life = options.life || Infinity;
+    
+// Az .animate függvény legvégén:
+// Csökkentjük életét a leanimált idővel, és ha élete kifutott, a világból töröljük
+	this.life-= time;
+	if (this.life<0) this.world.remove(this);
+```
+Ez egy azonnali következményként vonzza magával, hogy a _world_ objektumunknak kell, hogy legyen olyan _.remove_ függvénye, amivel törölhető egy objektum a világból. Ezt a _gameScript.js_-ben a world objektumon kell felvegyük, és a következőképp néz ki:
+
+```javascript
+var world = {
+	gravity: new Vector(0, 200),
+	insert: function(entity, asDrawable, asAnimatable) {
+		//... ami eddig is
+	},
+    
+	// Ez a függvény képes eltávolítani egy elemet a világ minden referencia tömbjéből
+	remove: function(entity){
+		// Ha az entitások közt van, vegyük ki
+		for (var i=0; i<world.entities.length;i++){
+			if (world.entities[i]==entity) {
+				world.entities.splice(i,1);
+				break;
+			}
+		}
+		// Ugyanígy a rajzolhatókra
+		for (var i=0; i<world.drawables.length;i++){
+			if (world.drawables[i]==entity) {
+				world.drawables.splice(i,1);
+				break;
+			}
+		}
+		// És az animálhatókra
+		for (var i=0; i<world.animatables.length;i++){
+			if (world.animatables[i]==entity) {
+				world.animatables.splice(i,1);
+				break;
+			}
+		}
+	},
+    
+    // ...továbbiak...
+```
+Így megoldjuk tehát, hogyha készítéskor megadnak egy _life_ értéket a részecskének, akkor az annyi millisecundumig fog élni. Eztán kikerül a világból, és nem lesz többé animálva, sem kirajzolva. A tulajdonság beállítására most nem térek ki, az látható lesz a következő kódrészletekben is.
+
+Következő, nehezebb lépésként készítsük el a játékos objektumot, amely a játékos állapotát tárolja, és őt rajzolja ki. Indoklások a kódban komment formában:
+```javascript
+// Egy objektum a játékosnak
+var player = {
+
+	// tároljuk a játékos helyét
+	position: new Vector(cWidth/2, cHeight/2),
+	// aktuális sebességét
+	speed: new Vector(),
+	// ágyújának állását egy vektorban
+	cannonVector: new Vector(),
+    
+	// a játékos kirajzolható
+	drawTo: function(ctx){
+		// rajzoláshoz használjuk ezt a színt
+		ctx.fillStyle = "blueviolet";
+
+		// rajzoljunk ki egy kört, ami a tank felső része
+		ctx.beginPath();
+		ctx.arc(player.position.x, player.position.y, 6, 0, Math.PI*2);
+		ctx.fill();
+
+		// rajzoljunk ki egy kissé lefelé eltolt téglalapot, ami a tank teste
+		ctx.fillRect(player.position.x-12,player.position.y+6-4,24,8);
+
+		// végül rajzoljunk egy kis pálcikát, ami az ágyú irányába mutat
+		ctx.beginPath();
+		// a középpontban kezdődik
+		ctx.moveTo(player.position.x,player.position.y);
+		// és a középponthoz képest az ágyú vektor koordinátáival van eltolva
+		ctx.lineTo(player.position.x + player.cannonVector.x, player.position.y + player.cannonVector.y);
+		ctx.stroke();
+	},
+    
+    // a játékos animálható is
+	animate: function(time){
+        // Az ágyúirányt az egér felé mutató vektorral készítjük el
+		var mousePos = new Vector(mouse.x, mouse.y);
+        // Vegyük a különbségvektort ami a játékostól az egérbe mutat, azt normalizáljuk (1 hosszúvá tesszük) és 15-szörösre nyújtjuk
+		player.cannonVector = mousePos.subtract(player.position).normalize().scaleInPlace(15);
+		player.position.addInPlace(player.speed.scale(time/1000));
+    }
+};
+
+// Ha megvagyunk a játékossal, be is szúrhatjuk a világba, hogy lássuk azt!
+world.insert(player, true, true);
+```
+
+Ha elkészültünk a játékossal, próbáljuk megcsinálni annak iránnyítását. Ezt a billentyűzettel oldjuk meg, amihez már lehet hogy korábban létre is hoztunk egy virtuális billentyűzet objektumot. Ez nagyon hasonlít az egér megoldására. A lényeg, hogy egy virtuális billentyűzet objekumban tároljuk, hogy milyen állapotban van a valós billentyűzet, és animációkor ezt olvassuk ki, és ezzel mozgatjuk a tankot.
+
+Tehát ez kerül a _gameScript.js_ végére:
+```javascript
+//... előtte az egér eseménykezelők voltak
+
+// Az eddigi var keyboard = {}; helyett->
+var keyboard = {
+	38:0, // fel
+	40:0, // le
+	37:0, // bal
+	39:0,  // jobb
+	87:0, // W - fel
+	83:0, // S - le
+	65:0, // A - bal
+	68:0, // D - jobb
+};
+// Gomblenyomás esetén beállítjuk azt a tároló objektumunkon
+document.onkeydown = function(ev){
+	if (ev.keyCode in keyboard){
+        // egy 1-essel jelezzük a gomb kódja mögötti értékben, hogy éppen lenyomva van
+		keyboard[ev.keyCode]=1;
+		return false;
+	}
+	return true;
+};
+// Gombfelengedés esetén, ha a gomb a lenyomottak közt van
+document.onkeyup = function(ev){
+	if (ev.keyCode in keyboard){
+        // akkor lenullázzuk a gomb kódja mögötti értéket
+		keyboard[ev.keyCode]=0;
+		return false;
+	}
+	return true;
+};
+
+// A kód végén marad a renderCiklus első időzítése
+window.requestAnimationFrame(gameLoop);
+```
+Ha már megvan a billentyűzet állapota, akkor nyilvánvalóan ott kell változtatnunk a kódon, ahol az inputokat olvassuk ki, ez pedig a _handleInputs_ függvény.
+```javascript
+	function(mouse, keyboard) {
+		// Számítsuk ki a tank aktuális sebességét a lenyomott gombokból
+		player.speed.x = (keyboard[39]+keyboard[68] - keyboard[37] - keyboard[65])*100;
+		player.speed.y = (keyboard[40]+keyboard[83] - keyboard[38] - keyboard[87])*100;
+        
+        /// folyt köv...
+```
+Ha hagyjuk a _handleInputs_ további részét úgy ahogy volt, vagy szimplán csak kitöröljük, akkor kipróbálhatjuk a játék mostani állpotát, és láthatjuk, hogy a tankunk a WASD vagy a nyíl gombokkal nagyszerűen irányítható a pályán. Persze ez még nem a végleges, de mindig jó látni munkánk gyümölcsét.
+
+A fejezet utolsó lépésében pedig megoldjuk, hogy az elkészített robbanás és ágyúgolyó a tankunk csövéből induljon ki.
+
+Ehhez az előbb félbehagyott _handleInputs_ függvényt kell folytassuk, kitörölve vagy átírva az előző fejezet robbanását megvalósító kódrészletet:
+```javascript
+    /// folyt köv...
+    var mousePos = new Vector(mouse.x, mouse.y);
+    
+    // kiszámítjuk, hol lenne a tank ágyújának vége, innen kell majd indítani a robbanásokat
+    var cannonEnd = player.position.add(player.cannonVector);
+    // kiszámíthatunk előre egy vektort ami a játékosból az egérhez vezet, hasznos lesz
+    var playerToMouseVector = mousePos.subtract(player.position);
+    // Tehát, ha gombnyomást olvastunk, akkor->
+    if (mouse.left) {
+        // Készítsük el a robbanásunkat (most átmeneti változók nélkül)
+        var explosion = new Explosion({
+            particles: [new Circle(0,0,{
+                    size: 10,
+                    color: colors[1],
+                    friction: 0.005,
+                    world: world,
+                    mass: 2,
+                    // az ágyúgolyó sebessége legyen 700 és mutasson a játékostól az egér felé
+                    speed: playerToMouseVector.clone().normalize().scaleInPlace(700),
+                    // és éljen 10mp-ig
+                    life: 10000
+                })],
+                // törmelék generátor
+            generator: function() {
+                return new Square(0,0,{
+                    size: 3,
+                    // a színeit válogassa egy globális tömbből (később)
+                    color: fireColors[Math.floor(Math.random()*3)],
+                    friction: 0.05 + Math.random() * 0.001,
+                    world: world,
+                    mass: Math.random(),
+                    // és éljenek 800-1000ms-t
+                    life: Math.random()*200+800
+                });
+            },
+            world:world,
+            particlesCount: 10,
+            strengthMin: 100,
+            strengthMax: 400,
+            // 22.5 fokos szórással
+            coneWidth:Math.PI/8,
+            // a játékos->egér vektor irányának megfelelően
+            coneOffset: Math.atan2(-playerToMouseVector.y, playerToMouseVector.x)
+        });
+
+        // süssük el az ágyúvég helyzetében (hoppá, új paraméter)
+        explosion.fire(cannonEnd);
+        mouse.left=0;
+    }
+}
+/// ... további függvények a world objektumon.
+
+// Valami globális helyen, objektumokon kívül:
+// Egy tömb, amiben a tűz színeinek megfelelő kódok vannak
+var fireColors = ['#FFFF47', '#FFBC42', '#FF5A1D'];
+```
+Észrevehetjük, hogy nem bonyolult, vagy nehéz a kódrészlet, ami az ágyúgolyó kilövését oldja meg, szimplán csak sokat kell paraméterezgetni, mert általánosra próbáltuk megcsinálni a robbanást az újrafelhasználhatóság miatt.
+
+Apropó robbanás, az előző kódrészlet végén jeleztem, hogy úgy használjuk itt a _.fire()_ függvényt, amit eddig nem csináltunk: megadjuk neki, hogy milyen helyzetből tüzelje a robbanást. Ehhez kell igazítanunk az Explosion osztályunk megfelelő függvényét:
+```javascript
+Explosion.prototype.fire = function(origin) {
+    for (var i = 0; i < this.particles.length; i++) {
+        var p = this.particles[i];
+        if (p.speed.length() == 0) {
+            p.speed = Explosion._conal2(this.coneWidth, this.coneOffset);
+            p.speed.scaleInPlace(Explosion._randbetween(this.strengthMin, this.strengthMax));
+        }
+        // A változás az, hogyha van robbanás eredet megadva, akkor helyezzünk át oda minden részecskét beszúrás előtt
+        if (origin){
+            p.position.x = origin.x;
+            p.position.y = origin.y;
+        }
+        this.world.insert(p, true, true);
+    }
+};
+```
+
+Szóval, talán végeztünk. A tankunk mozog, és golyókat lő, amiket tűz részecskék kísérnek, és a tank kivételével mindenki engedelmeskedik a gravitációnak. Nagyszerű látvány, nemde?
 
 11. Játék alapok - Ütközésdetektálás
 ---------------
