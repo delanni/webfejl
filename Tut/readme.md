@@ -494,8 +494,233 @@ Ha már értjük mit csináltunk, próbáljuk ki, hogy valóban az történik-e 
 7. Pszeudo-fizikai megközelítés
 ---------------
 
+Azért írtam pszeudo-fizikait, mert jól hangzik, na meg persze azért is, mert nem lesz valódi fizikai szimuláció a játékban. Kicsit távolról próbálunk pár dolgot közelíteni, amit ismerünk a középiskolai fizikából. Első lépésként a gyorsulás-sebesség-pozíció hármast próbáljuk jobban közelíteni, amit már az előző részben is megemlítettünk.
+
+A dolog, amit csinálunk most, az, hogy lecseréljük az egyszerű sebesség alapú mozgatást a négyzeteinkben egy gyorsulás és súrlódás alapúra. Ezzel kicsit jobban kinéző animációkat tudunk készíteni, és így tudjuk figyelembe venni a gravitációt is később.
+
+Ehhez a Square.js-ben a Square osztályunk _animate_ függvényét szabjuk át így:
+```javascript
+Square.prototype.animate = function(time){
+	// A gyorsulásból számítjuk a sebességet
+	this.speed.addInPlace(this.acceleration.scale(time/1000));
+
+	// Csökkentjük a sebességet a súrlódással, és limitáljuk azt két határ közé
+	this.speed.clamp(this.minSpeed, this.maxSpeed);
+ 	this.speed.scaleInPlace(1-this.friction);
+
+	this.position.addInPlace(this.speed.scale(time/1000));
+};
+
+````
+
+Amint látható, az előbb meghivatkoztunk 4 tulajdonságot ami nem volt eddig jellemző a négyzetünkre: gyorsulás, súrlódás, minimum és maximum sebesség. Felvehetnénk ezt egyszerűen új paraméterekként a Square konstruktorban, de annak az lenne a vége, hogy végtelen paraméter felé közelítenénk. Ehelyett használjuk a Javascriptben elterjedt paraméterobjektumos inicializálást, amely lényege, hogy a másodlagos tulajdonságokat egy objektumba tömörítve adjuk át a konstruktornak, aki ebből veszi ki az egyes értékeket.
+
+Ehhez a Square konstruktora a következőképp alakul át:
+```javascript
+// Az egyre gyarapodó paraméterlista helyett options argumentum objektum
+var Square = function(x,y, options){
+	// Ha nem volt options megadva, akkor legyen az egy üres objektum
+	options = options || {};
+
+	this.position = new Vector(x,y);
+
+    // Használjuk a || (vagy) operátort az alapértelmezett értékekhez
+	this.size = options.size || 5;
+	this.color = options.color ||  "#eb01aa";
+	this.speed  = options.speed || new Vector();
+	this.acceleration = options.acceleration || new Vector();
+
+	// A valószerűbb viselkedéshez csökkenteni, és korlátozni kell a részecskék sebességét
+	this.friction = options.friction || 0.1;
+	this.maxSpeed = options.minSpeed || Square.SPD_MAX;
+	this.minSpeed = options.maxSpeed || Square.SPD_MIN;
+};
+
+// Csinálhatunk osztály szinten is konstansokat, amiben az alapértelmezett értékeket tárolhatjuk.
+Square.SPD_MIN = -150;
+Square.SPD_MAX = 150;
+``` 
+
+Továbbá használtunk egy _.clamp_ függvényt, ami a vektor értékeit korlátozza minimum és maximum értékek közé. Ezt pótlólagosan felvisszük a Vector osztály függvényei közé, a Vector.js fájlban:
+```javascript
+// Korlátozó függvény, amivel könnyen, gyorsan limitálhatjuk a sebességet pl.
+Vector.prototype.clamp = function(min, max) {
+	if (min > max) throw new Error("Inverse ranges");
+    // X
+	if (this.x > max) {
+		this.x = max;
+	}
+	else if (this.x < min) {
+		this.x = min;
+	}
+    // Y
+	if (this.y > max) {
+		this.y = max;
+	}
+	else if (this.y < min) {
+		this.y = min;
+	}
+};
+
+```
+Mivel a négyzetek már új féle tulajdonságokat is várnak konstruálás során, így adjuk meg a _gameScript.js_ megfelelő részében ezeket a paraméter objektum használatával:
+```javascript
+    // Ahol eddig generáltuk a négyzeteket, most így:
+var colors = ["#a171ca", "#0a46c1", "#99ea49", "#abac0a"];
+var squares = [];
+for(var i=0; i<50; i++){
+	var sq = squares[i] = new Square(Math.random()*cWidth,Math.random()*cHeight, {
+		size:15,
+		color:colors[i%4],
+		friction: Math.random()*0.01
+	});
+	world.insert(sq,true, true);
+}
+
+```
+
+Miután a négyzeteink felkészültek arra, hogy gyorsulással vezéreljük őket, már csak a fő input kezelő logikát kell úgy módosítani, hogy ne a négyzetek sebességét, hanem gyorsulásukat állítsa az egér kurzor felé mutató irányba:
+```javascript
+// gameScript.js handleInputs függvényében a megfelelő helyen:
+
+    if (entity instanceof Square){
+        // Ehelyett:
+        //entity.speed = mousePos.subtract(entity.position);
+        entity.acceleration = mousePos.subtract(entity.position);
+    }
+```
+Ha semmit nem felejtettünk el, akkor az előzőhöz hasonlóképp működik a kis demónk, a négyzetek itt is az egeret követik, de mozgásuk láthatóan rugalmasabb, dinamikusabb.
+
 8. Pszeudo-fizika, gravitáció
 ---------------
+
+Az új és szép dinamikus világunkban van még egy triviális dolog ami segíthet a játékunk összhatásán: gravitáció!
+Majdnem minden játékban előfordul, és néhány játék szinte csak erre alapoz. Az emberek életük során már elég jól előre tudják becsülni a dolgok röppályáját, ami annak köszönhető, hogy már megszoktuk és természetesnek tartjuk a gravitációt. Tehát ha a játékunk nem használ gravitációs jellegű erőt, akkor az természetellenes hatással fog járni.
+
+Erre a változtatásokat a _gameScript.js_-ben és a _Square.js_-ben is kell tennünk:
+1., Átírjuk az inputkezelést, hogy csak akkor vonzza a négyzeteket, ha mi akarjuk.
+```javascript
+// Alakítsuk át a handleInputs függvényünk a következőképp
+// ...
+handleInputs: function(mouse, keyboard) {
+		var mousePos = new Vector(mouse.x, mouse.y);
+
+		// Csak akkor ha nyomva van a gomb
+		if (mouse.left) {
+			for (var i = 0; i < world.entities.length; i++) {
+				var entity = world.entities[i];
+				if (entity instanceof Square) {
+                // Legyen a gyorsulás az egér felé mutató vektor 3 szorosa
+					entity.acceleration = mousePos.subtract(entity.position).scale(3);
+				}
+			}
+		} else {
+			for (var i = 0; i < world.entities.length; i++) {
+				entity = world.entities[i];
+				if (entity instanceof Square) {
+                    // Különben nullázzuk a kívülről érkező gyorsulást
+					entity.acceleration.scaleInPlace(0);
+				}
+			}
+		}
+	}
+//...
+```
+
+2., Ahol eddig az egéreseményeinket gyűjtöttük, állítsuk be a virtuális egér pozícióján túl azt is, hogy nyomva van-e a gomb rajta. Ehhez egy böngészőfüggetlen trükkel a következőt írhatjuk oda ahol eddig csak a pozíciót mentegettük:
+```javascript
+canvas.onmousemove = canvas.onmousedown = canvas.onmouseup = function(ev) {
+	var rect = canvas.getBoundingClientRect();
+	mouse.x = ev.offsetX || ev.clientX - rect.left;
+	mouse.y = ev.offsetY || ev.clientY - rect.top;
+    // Próbáljuk kiolvasni hogy nyomva van-e valamelyik gomb
+	mouse.left = ev.buttons || ev.which;
+};
+```
+3., Felcsatolunk egy gravitáció vektor tulajdonságot, mint a világ tulajdonsága. Ez arra lesz jó, hogy ha az entitásoknak, pl egy négyzetnek megadjuk referenciaként az őt tartalmazó világot, akkor meg tudja nézni, hogy ott milyen gravitációs gyorsulásnak kell engedelmeskednie. 
+```javascript
+var world = {
+	gravity: new Vector(0, 200),
+    // ...
+};
+
+// Továbbá adjuk paraméterül a világot a négyzetünknek, hogy szükség esetén meg tudja nézni a világ gravitációját
+// Ahol a négyzeteket generáltuk:
+var colors = ["#a171ca", "#0a46c1", "#99ea49", "#abac0a"];
+var squares = [];
+for (var i = 0; i < 5; i++) {
+	var sq = squares[i] = new Square(Math.random() * cWidth, Math.random() * cHeight, {
+		size: 15,
+		color: colors[i % 4],
+		friction: 0.005+Math.random()*0.001,
+		// Már a világot és egy tömeget is átadunk a négyzetnek
+        world: world,
+		mass: 1 + Math.random()
+	});
+	world.insert(sq, true, true);
+}
+
+```
+4., Egészítsük ki a négyzet osztályunkat, hogy a megkapott tömegnek megfelelően gyorsítsa magát a világ gravitációjának irányában. (_* megjegyzés: innen látszik, hogy pszeudo-fizika, mert a valós világban a testek a tömegüktől függetlenül egységesen ~9.81m/(s^2)-tel gyorsulnak lefelé, de a játékban ezzel a kis csalással lehet szimulálni leginkább a légellenállást és a zuhanási végsebességet_). Szóval a _Square.js_-ben:
+
+```javascript
+    // A Square konstruktorában vegyük át a világot és a tömeget:
+var Square = function(x,y, options){
+	options = options || {};
+    
+    this.world = options.world;
+	this.mass = options.mass || 0;
+    
+    // ...
+    // a többi paraméter
+    // ...
+};
+
+// Változtassuk meg az animáló függvényt, úgy hogy kezelje a gravitációt is:
+Square.prototype.animate = function(time){
+	this.speed.addInPlace(this.acceleration.scale(time/1000));
+	
+	// Számoljuk bele a gravitációs szabadesés hatását is, tömeggel súlyozva
+	this.speed.addInPlace(this.world.gravity.scale(time/1000 * this.mass));
+
+	this.speed.clamp(this.minSpeed, this.maxSpeed);
+ 	this.speed.scaleInPlace(1-this.friction);
+
+	this.position.addInPlace(this.speed.scale(time/1000));
+};
+
+// Állítsuk a minimum és maximum küszöböket kicsit nagyobbra
+Square.SPD_MIN = -600;
+Square.SPD_MAX = 600;
+
+```
+5., Bónusz: Ha szeretnénk valahogy vizualizálni a vektorokat, amik az egér pozíció felé mutatnak, akkor a következő kódrészletet kell a négyzet kirajzolófüggvényeként írnunk:
+```javascript
+Square.prototype.drawTo = function(context){
+	context.fillStyle = this.color;
+	context.fillRect(this.position.x,this.position.y,this.size, this.size);
+    // Ha van gyorsulás, akkor rajzoljunk
+	if (this.acceleration.x || this.acceleration.y){
+		context.strokeStyle = this.color;
+        
+        // Így jelezzük, hogy jegyezze fel a következő lépéseket
+		context.beginPath();
+        
+        // Menjünk a vásznon a négyzet pozíciójába
+		context.moveTo(this.position.x,this.position.y);
+        
+        // És húzzunk onnan vonalat egy olyan pozícióba, amit a gyorsulás vektor harmadával toltunk el (harmadolni kell, mert a gyorsulás vektor az egérbe mutató vektor 3 szorosa lett korábbról)
+		context.lineTo(this.position.x+this.acceleration.x/3, this.position.y+this.acceleration.y/3);
+        
+        // Majd mondjuk, hogy ennyit akartunk most rajzolni, megrajzolhatjuk a feljegyzett lépéseket
+		context.stroke();
+	}
+};
+
+```
+
+Ha mindezzel végeztünk, megint pihenjünk rá, és nézzük meg munkánk eredményét. Ezúttal már egy játékhoz hasonló kis demót kaptunk, ahol rugalmas (látható, vagy láthatatlan, a bónusz lépéstől függ) fonalon lengethetünk négyzeteket, amely fonalat, ha elengedünk, a négyzetek lezuhannak.
+
 
 9. Ágyú és robbanások
 ---------------
@@ -517,4 +742,4 @@ Ha már értjük mit csináltunk, próbáljuk ki, hogy valóban az történik-e 
 
     
 
-_A leírást készítette: Szabó Alex, `<time datetime="2015-04-10 19:00">`2015`</time>`_
+_A leírást készítette: Szabó Alex, `<time datetime="2015-04-10 19:00">2015</time>`_

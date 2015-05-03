@@ -16,7 +16,7 @@ var Square = function(x,y, options){
 	this.acceleration = options.acceleration || new Vector();
 
 	// Vezessük be a tömeg jelenlétét, hogy a gravitációs eséshez tudjuk használni
-	this.mass = options.mass;
+	this.mass = options.mass || 0;
 	this.friction = options.friction || 0;
 	this.maxSpeed = Square.SPD_MAX;
 	this.minSpeed = Square.SPD_MIN;
