@@ -1197,6 +1197,127 @@ Szóval, talán végeztünk. A tankunk mozog, és golyókat lő, amiket tűz ré
 
 11. Játék alapok - Ütközésdetektálás
 ---------------
+A játékokban az ütközésdetektálás fontos pont. A játékok legtöbb mechanikája és logikája valamilyen formában arra épül, hogy egyes egységek, entitások ütköznek. Ezt detektálni nem mindig triviális feladat, de a mi esetünkben (mivel nagyon egyszerű entitásaink vannak) könnyen megoldható. 
+
+Két négyzet közti ütközés az AABB módszerrel megoldható, de leegyszerűsíthető a bennfoglaló körök ütköztetésére. És a körök ütközésének detektálása pedig teljesen triviális: ha középpontjaik távolsága kisebb mint a sugarak összege, akkor ütköznek.
+
+Két dolgot megkülönböztethetünk az ütközésdetektálás implementálása során: magát az ütközés detektálást, és az ütközés választ. Ebben a lépésben főként az ütközés detektálást készítjük el, ütközésválaszként egy egyszerű, jelzés értékű logolást teszünk.
+
+Ez tehát 2 függvényt indokol azokon az osztályokon, objektumokon, akiket ütköztetni szeretnénk, egy _.intersects(other)_ és egy _.handleCollisionWith(other)_ függvényt. Most gondoljunk bele, hogy ki az akit valaha is ütköztetni szeretnénk?
+
+Az ellenségeket és a lövedékeket, és már sejthetjük, hogy az ellenség leginkább a játékoshoz fog hasonlítani, ezért tehát a játékoson és a Circle osztályon kell megírnunk ezt a két függvényt. 
+
+Először helyezzük el ezt a két függvényt a játékos objektumunkon:
+```javascript
+var player = {
+    // ... előző függvényeken túl
+    
+    // ...
+    // Egy függvény az ütközésdetektálásra
+    intersects: function (other) {
+        // Kb egy 8 sugaru korrel lehet bennfoglalni a jatekost
+        var playersBoundingCircleRadius = 8;
+
+        // Megnezzuk a vizsgalt targy bennfoglalo sugarat
+        if (other instanceof Square) {
+            // Negyzeteknel az atlo fele
+            var boundingCircleRadius = Math.sqrt(2) * other.size / 2;
+        } else if (other instanceof Circle) {
+            // Koroknel trivialis
+            var boundingCircleRadius = other.size;
+        }
+        // A tavolsag az egyik kozeppontbol masik kozeppontba huzott vektor hossza
+        var distance = other.position.subtract(player.position).length();
+        // Ha ez a tavolsag kisebb mint a ket bennfoglalo kor sugaranak osszege, akkor metszik egymast
+        if (distance < (playersBoundingCircleRadius + boundingCircleRadius)) {
+            return true;
+        } else {
+            return false;
+        }
+    },
+    // Az ütközésválasz pedig egy egyszerű logolás
+    handleCollisionWith: function (other) {
+        // Ki ütközött kivel?
+        console.log(this, "collided", other);
+    }
+};
+```
+
+Ehhez nagyon hasonló lesz a Circle osztály ütközésdetektálása és válasza:
+```javascript
+// Ugyanaz mint a játékosnál kb.
+Circle.prototype.intersects = function (other) {
+    // itt nem kell külön bennfoglaló kört becsülni a körnek, hiszen a this.size pont az
+    if (other instanceof Square) {
+        var boundingCircleRadius = other.size * Math.sqrt(2) / 2;
+    } else if (other instanceof Circle) {
+        var boundingCircleRadius = other.size;
+    }
+    var distance = this.position.subtract(other.position).length();
+    if (distance < (this.size + boundingCircleRadius)) {
+        return true;
+    } else {
+        return false;
+    }
+};
+
+// És az ütközésválasz is
+Circle.prototype.handleCollisionWith = function (other) {
+    console.log(this, "collided", other);
+};
+```
+
+Szóval megvagyunk, felkészítettük a fontosabb entitásokat az ütköztetésre, már csak egy olyan logika kell, aki végigteszteli párosával az összes entitást, és megnézi, hogy ütköznek-e. Mivel ez egy minden körben lefutó ciklusnak néz ki, és nem függ a felhasználói inputtól, így érdemes lehet új függvényt készítenünk a számára a _world_ objektumunkon.
+
+Helyezzük tehát valahova a world objektumunkra ezt a függvényt
+```javascript
+var world = {
+    // többi tulajdonság, és függvény...
+    
+    // ...
+
+// Ez a függvény végigmegy az összes entitáson, és próbálja őket ütköztetni
+    checkCollisions: function () {
+        // Vegyük sorra az összes elemet
+        for (var i = 0; i < world.entities.length; i++) {
+            // Majd minden elemhez vegyük sorra az utána következőket, így egy páros csak egyszer kerül vizsgálatra
+            for (var j = i + 1; j < world.entities.length; j++) {
+                // Vegyük ki a páros elemeit 1-1 változóba
+                var e1 = world.entities[i];
+                var e2 = world.entities[j];
+
+                // Ha mindkét elem kezel metszést
+                if (e1.intersects && e2.intersects) {
+                    // és ha az egyik elem metszi a másikat, és van ütközés kezelő függvénye
+                    if (e1.intersects(e2) && e1.handleCollisionWith) {
+                        // akkor hívjuk meg az ütközés kezelő függvényét
+                        e1.handleCollisionWith(e2);
+                    }
+                    // ugyanez a másik irányban is
+                    if (e2.intersects(e1) && e2.handleCollisionWith) {
+                        e2.handleCollisionWith(e1);
+                    }
+                }
+            }
+        }
+    },
+    
+    /// stb.
+};
+
+// És ezt a gameLoop játékciklusunkban valahol hívjuk is meg, hogy végrehajtsuk minden körben:
+var gameLoop = function (t) {
+    // ... 
+    
+    // mondjuk az inputkezelés és a világ szimuláció közt ütközést detektálhatunk
+    world.handleInputs(mouse, keyboard);
+    world.checkCollisions();
+    world.simulate(delta);
+    // ...
+};
+```
+
+
 
 12. Játék alapok - Rugalmas ütközés
 ---------------
