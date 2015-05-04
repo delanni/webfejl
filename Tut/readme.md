@@ -24,6 +24,7 @@ A fejlesztés 14 nagyobb lépésben történik. Ezek sorban a következők:
 12. [Játék alapok - Rugalmas ütközés](#12-j%C3%A1t%C3%A9k-alapok---rugalmas-%C3%BCtk%C3%B6z%C3%A9s)
 13. [Rendszerezés, refaktorálás](#13-rendszerez%C3%A9s-refaktor%C3%A1l%C3%A1s)
 14. [Játék logika - Ellenségek](#14-j%C3%A1t%C3%A9k-logika---ellens%C3%A9gek)
+15. [Vége](#15-fin)
 
 Az út hosszú, de tanulságos. A forráskódot folyamatosan javítjuk és szépítjük, hogy a végén egy jól áttekinthető kódunk legyen.
 
@@ -1205,7 +1206,7 @@ Két dolgot megkülönböztethetünk az ütközésdetektálás implementálása 
 
 Ez tehát 2 függvényt indokol azokon az osztályokon, objektumokon, akiket ütköztetni szeretnénk, egy _.intersects(other)_ és egy _.handleCollisionWith(other)_ függvényt. Most gondoljunk bele, hogy ki az akit valaha is ütköztetni szeretnénk?
 
-Az ellenségeket és a lövedékeket, és már sejthetjük, hogy az ellenség leginkább a játékoshoz fog hasonlítani, ezért tehát a játékoson és a Circle osztályon kell megírnunk ezt a két függvényt. 
+Az ellenségeket és a lövedékeket, és most megsúgom, hogy az egyszerűség kedvéért az ellenséget a lövedékből fogjuk származtatni. Így tehát elég lenne csak a Circle osztályon megírni, de a példa kedvéért megírhatjuk a játékoson is. 
 
 Először helyezzük el ezt a két függvényt a játékos objektumunkon:
 ```javascript
@@ -1614,7 +1615,7 @@ var Player = function (options) {
 };
 ```
 
-Mivel már van egy olyan osztályunk, amivel világokat tudunk példányosítani, és egy olyan is, amivel játékosokat, a _gameScript.js_-ben leegyszerűsíthetjük ezeket a részeket:
+Mivel már van egy olyan osztályunk, amivel világokat tudunk példányosítani, és egy olyan is, amivel játékosokat, a _gameScript.js_-ben leegyszerűsíthetjük ezeket a részeket. Tehát ott ahol a world és a player változókat elkészítjük:
 ```javascript
 var world = new World();
 var player = new Player({
@@ -1624,12 +1625,273 @@ var player = new Player({
 world.insert(player, true, true);
 ```
 
-Ugye mennyivel szebb és átláthatóbb? Nyilván nagyon sok nem-triviális részletet rejtettünk el a World és Player osztályokban, de azoknak igazából ott is a helyük, és nem a játék magasabb absztrakciós szintű nézetével egy helyen.
+Ugye mennyivel szebb és átláthatóbb? Nyilván nagyon sok nem-triviális részletet rejtettünk el a _World_ és _Player_ osztályokban, de azoknak igazából ott is a helyük, és nem a játék magasabb absztrakciós szintű nézetével egy helyen.
 
-Ha mindent jól csináltunk, a játékunk ugyanúgy fut ahogy eddig, annyi változott csak, hogy a _world_ és a _player_ példányaink példányosítással készülnek objektum literálok helyett.
+Ha mindent jól csináltunk, a játékunk ugyanúgy fut ahogy eddig, annyi változott csak, hogy a _world_ és a _player_ példányaink példányosítással készülnek objektum literálok helyett, és másik fájlokban tároljuk az osztályok definícióját.
 
 14. Játék logika - Ellenségek
 ---------------
 
+Rövid szusszanás után egy utolsó nagy lépésben értelmet adunk eddigi fáradozásainknak azzal, hogy célpontokat és pontozást teszünk a játékba.
 
-_A leírást készítette: Szabó Alex, `<time datetime="2015-04-10 19:00">2015</time>`_
+Ha mindent jól csináltunk eddig, akkor a játékunkban egy mozgatható kis tank játékos van, aki golyókat tud lövöldözni. Ennek még célja nincs. Ezért behozunk ellenségeket, akiket lőni lehet, és ezzel pontot gyűjteni.
+
+Készítsük el először az ellenségeket reprezentáló osztályt. Mivel azt szeretnénk, hogy a játékban a látvány javítása céljából az ellenségek is ütközzenek az ágyúgolyókkal, ezért átmásolhatnánk a rugalmas ütközés logikáját kézzel az Enemy osztályunk megfelelő részére, és felkészítenénk mindkét kódot arra, hogy egymással tudjanak ütközni. Ugyanakkor, a példa kedvéért itt megmutatom nektek hogy hogyan lehet a javascriptben szimulálni az objektumorientált világ öröklés koncepcióját. 
+
+Amikor egy osztály örököl egy másikból, az azt jelenti, hogy az ősosztály példányának minden tulajdonsága megjelenik a leszármazott példányában. És a leszármazott osztály még új dolgokkal is ki tudja terjeszteni a saját példányát az ősön túl. Mivel javascriptben nincs klasszikus öröklés, csak prototípusok, így ezt kicsivel nehezebb megoldani.
+
+A logika amit itt alkalmazunk két lépésből áll:
+ 1 amikor a leszármazott objektumot konstruáljuk, akkor hívjuk meg a leszármazottra az ős konstruktorát is, hogy az be tudja állítani a saját magának megfelelő tulajdonságokat a konstruktor paraméterben kapott értékekből
+ 2 a leszármazott osztály (függvény) prototípusának állítsuk be az ősosztály 1 db példányát, így minden rajta definiált függvény megjelenik az összes leszármazott példányon.
+ 
+_Megjegyzés: ha a World és Player osztályoknál használt osztály szimulációs módszert használnánk (amikor nem a prototípus objektumon állítunk be függvényeket, hanem a konstruktorban készítünk függvény példányokat), akkor a második lépés itt felesleges lett volna, hiszen amikor az őskonstruktort meghívjuk, az elkészíti az összes függvényét a leszármazott példányán is._
+
+Ez a sok bonyolult zagyva után lássuk a kódot:
+```javascript
+var Enemy = function (x, y, options) {
+    // Ez az első említett lépés: az ős konstruktorát meghívjuk az éppen készülő Enemy példányon, a this-en
+    Circle.apply(this, arguments);
+
+    // Ezek után további, csak az Enemy-re jellmző tulajdonságokat beállíthatunk a példányon:
+    
+    // Saját kép paraméterei, ami alapján kirajzolásra kerül az ellenség képe
+    this.planeCoords = this.planes[options.planeId || 0];
+    // a this.planes[] tömb majd a prototípusra kerül rá, így minden példány látni fogja, és a választható repülőgép kép koordinátákat tartalmazza
+    this.planeId = options.planeId;
+    this.currentPointValue = 1;
+};
+
+// És készítsünk el egy példányt a Circle-ből, ez a második említett lépés
+Enemy.prototype = new Circle();
+```
+Ezzel tehát logikailag leszármaztunk a Circle osztályból. Amikor létrehozunk egy új Enemy példányt, akkor az tökéletesen úgy fog kinézni, és viselkedni, mint egy Circle példány, mint egy ágyúgolyó például. Ezért írjuk felül az Enemy prototípusán néhány függvényt, pl. a kirajzolást és az ütközésválaszt (így tehát az animálást és az ütközésdetektálást nem kell újraírnunk, de az öröklés miatt elérhetők).
+
+Először a kirajzolást írjuk folytatva az Enemy osztályt:
+```javascript
+// Azzal, hogy az elkészült prototípuson felülírunk egy függvényt, gyakorlatilag felülírjuk a kirajzolást 
+// minden leendő Enemy példányon, ami tulajdonképpen a célunk, hiszen az ellenségeket másképp szeretnénk kirajzolni
+Enemy.prototype.drawTo = function (ctx) {
+    // Használjuk a kontextuson adott .drawImage függvényt
+    // paraméterezése:
+    // mit, honnanX, honnanY, honnanSzél, honnanMag, hovaX, hovaY, hovaSzél, hovaMag
+    ctx.drawImage(this.image,
+        this.planeCoords.x, this.planeCoords.y, this.planeCoords.width, this.planeCoords.height,
+        this.position.x - this.size / 2, this.position.y - this.size / 2, this.size, this.size);
+};
+```
+
+Ha felül akarunk írni egy ősből örökölt függvényt, akkor az eltűnik teljesen. A mi esetünkben az ütközés választ nem szimplán felül akarjuk írni, hanem kiterjeszteni akarjuk, tehát az eredeti rugalmas ütközésen kívül szeretnénk szikrákat szórni egy _Explosion_ segítségével.
+Ehhez azt tehetjük, hogy elmentjük az eredeti ütközésválaszt, valamilyen más néven, majd az ütközésválaszt felülírjuk, és a kiterjesztés során valahol meghívjuk az eredeti, elmentett függvényt is. Ezzel megtörténik az eredeti rugalmas ütközés, és az is, amit mi szeretnénk hozzátenni az ellenség osztályban:
+```javascript
+// Elmentjük az örökölt függvényt
+Enemy.prototype.parentCollide = Enemy.prototype.handleCollisionWith;
+// Felülírjuk az örökölt függvényt
+Enemy.prototype.handleCollisionWith = function (other) {
+    if (other instanceof Enemy || other instanceof Square) return;
+
+    // Ütközés után beszínezzük másfélére a repülőt, úgy hogy másik képet használunk
+    this.planeCoords = this.planes[this.planeId + 2];
+    // Gyorsulását lenullázzuk, amivel zuhanásba kezd a gravitáció miatt
+    this.acceleration.scaleInPlace(0);
+
+    // Készítünk egy formás robbanást
+    var enemy = this;
+    var expl = new Explosion({
+        generator: function () {
+            return new Square(0, 0, {
+                size: 5,
+                color: "rgb(2" + Math.floor(55 * Math.random()) + ",30,50)",
+                friction: 0.05 + Math.random() * 0.001,
+                world: enemy.world,
+                mass: Math.random(),
+                life: Math.random() * 200 + 800
+            });
+        },
+        world: enemy.world,
+        particlesCount: 20,
+        strengthMin: 100,
+        strengthMax: 400,
+        coneWidth: Math.PI / 4,
+        coneOffset: Math.atan2(-other.speed.y, other.speed.x)
+    });
+    // és azt elsütjük a repülő helyén
+    expl.fire(this.position);
+
+    // Majd meghívjuk az eredeti ütközésválasz függvényt, ami rugalmasan ütközteti a két testet.
+    this.parentCollide(other);
+    
+    // A repülőnek lecsökkentjük a tömegét, hogy ne zuhanjon túl gyorsan
+    this.mass = other.mass;
+
+    // A világ referenciánkon jelezzük, hogy pontot ér a találat
+    this.world.yieldPoints(this.currentPointValue);
+    // És növeljük a pontértéket, hogy a zuhanó repülő többet érjen
+    this.currentPointValue *= 2;
+    // De max 16-ot
+    if (this.currentPointValue > 16) this.currentPointValue = 0;
+};
+```
+
+Ezzel elméletileg megvagyunk az ellenség osztálynak a logikai részével. Már csak a vizuális részén kell javítanunk valamennyit. Ehhez be kell töltenünk egy _img_ tagbe egy képet, hogy használhassuk rajzolás alapjául, és elmentjük az Enemy osztály prototípusára a képet és a képen lévő objektumok logikai helyét.
+_Megjegyzés: a képen lévő koordinátákat és szélességeket kézzel mértem ki, és az alapján állítottam össze a tömböt ami tárolja ezeket_
+
+Folytassuk tehát ezzel az _Enemy.js_-t:
+```javascript
+// Mivel ez az osztály behúzásakor lefutó javascript kód, ezért lehetőségünk van bármit csinálni. Például behúzhatunk egy kép fájlt
+// amiből később ki tudunk másolni sprite-okat a képernyőre. Mivel az ellenségek vannak ezen a képen, ezért itt behúzhatjuk.
+
+// Készítsünk egy üres IMG taget
+var atlas = document.createElement("img");
+// az atlaszunk onload függvénye AKKOR hívódik meg, ha a kép sikeresen betöltődött
+atlas.onload = function () {
+    // Ekkor tároljuk le az ellenség prototípusán a referenciát a képre
+    Enemy.prototype.image = atlas;
+    // És az objektumot, ami tárolja a képek részleteinek koordinátáit
+    Enemy.prototype.planes = [
+        {
+            x: 0,
+            y: 292,
+            width: 88,
+            height: 73
+        },
+        {
+            x: 0,
+            y: 73,
+            width: 88,
+            height: 73
+        },
+        {
+            x: 88,
+            y: 219,
+            width: 88,
+            height: 73
+        },
+        {
+            x: 88,
+            y: 0,
+            width: 88,
+            height: 73
+        },
+    ];
+}
+// Rejtsük el a kis képeket tartalmazó elemet
+atlas.style.display = "none";
+// Amint hozzáadjuk az img elemet és beállítjuk annak forrását, elkezdi a böngésző letölteni a képet
+document.body.appendChild(atlas);
+atlas.src = "planes.png";
+
+// Források
+// http://opengameart.org/content/tappy-plane
+```
+Nagyszerű! Most már meg is jelenne a repülőnk, ha hozzáadnánk egy példányt a játékhoz. Mozogjunk tehát át a _gameScript.js_-be, hogy hozzá tudjuk adni az ellenség példányokat a világhoz.
+
+Tegyük a következőt: indítsunk egy egyszerű időzítőt, ami fél másodpercenként próbálkozik, és valamilyen eséllyel hozzáad egy új ellenséget a pályához véletlenszerű tulajdonságokkal.
+```javascript
+// Az időzítő függvényekkel működik, amit meghívhat
+var addEnemy = function () {
+    // A függvény ne mindig adjon hozzá új repülőt, csak az esetek 70%-ában
+    if (Math.random() >= 0.7) {
+        var x, xspeed, id;
+        // Ha már hozzáadunk repülőt, akkor az 50-50%-ban balra vagy jobbra kerüljön
+        if (Math.random() > 0.5) {
+            // Melyik oldalon kezdjen?
+            x = cWidth;
+            // Merre menjen?
+            xspeed = -50 - Math.random() * 50;
+            // Melyik modellt használja?
+            id = 0;
+        } else {
+            x = 0;
+            xspeed = 50 + Math.random() * 50;
+            id = 1;
+        }
+        // A magasság is legyen randomizált bizonyos keretek közt
+        var y = cHeight - 150 - Math.random() * (cHeight-200);
+        
+        // Készítsük el a generált paraméterekkel az ellenség példányt
+        var enemy = new Enemy(x, y, {
+            size: 50,
+            life: 15000,
+            // Menjen a kép másik oldala felé
+            speed: new Vector(xspeed,0),
+            // Legyen pont a gravitációt kiegyenlítő gyorsulása
+            acceleration: world.gravity.scale(-1),
+            friction:0,
+            // és kezdetben az ágyúgolyónál nagyobb tömege
+            mass: 10,
+            planeId: id
+        });
+        
+        // Majd adjuk hozzá ezt az ellenséget a világhoz.
+        world.insert(enemy,true,true);
+    }
+};
+
+// Időzítsük ezt fél másodpercenkénti végrehajtásra
+window.setInterval(addEnemy, 500);
+```
+
+Ha most kipróbálnánk a játékot, és nem raktunk volna egy apró utalást egy későbbi feature-re, akkor azt láthatnánk, hogy az ellenségek megjelennének, repülnének, és lelőhetők lennének. Mindez annak köszönhető, hogy az ellenségek a körökből származnak, amelyek pedig animálhatók, és animációjuk során helyüket változtatják a sebességük irányában... minden visszautal az első pár fejezetben elkészített aprócska, jelentéktelennek tűnő részletre.
+
+Fejezzük be tehát az utolsó hiányzó kirakós darab beillesztését, oldjuk meg a pontok számolását és megjelenítését. A pontok számolását a Wolrd példányokon oldottam meg, amelyek számára a _.yieldPoints(p)_ függvénnyel lehet pontokat jelenteni. A World példányok dolga hogy számítsák azt, és a képernyőn frissítsék a megjelenítését.
+
+Menjünk tehát a _World.js_-be, és egészítsük ki azt:
+```javascript
+// Az osztály elején vigyünk fel egy tagváltozót a pontok karbantartására, és egy függvényt ennek jelentésére:
+
+var World = function () {
+    // A tulajdonságokat a this objektumra tehetjük
+    this.gravity = new Vector(0, 200);
+    this.entities = [];
+    this.drawables = [];
+    this.animatables = [];
+    
+    this.points = 0;
+    
+    this.yieldPoints = function(amount){
+        this.points += amount;
+    };
+    
+    // ... többi World függvény
+    
+    // Egészítsük ki az összes entitást kirajzoló ciklust egy apró dologgal:
+    // Még mindig a konstruktoron belül
+    this.draw = function (ctx) {
+        for (var i = 0; i < this.drawables.length; i++) {
+            var drawable = this.drawables[i];
+            drawable.drawTo(ctx);
+        }
+        // Rajzoljuk ki az aktuális pontokat 30px méretben
+        ctx.font = "30px sans-serif";
+        // Középre igazítva
+        ctx.textAlign = "center";
+        // A szöveg felső pontjával csatolva
+        ctx.textBaseline = "top";
+        // A képernyő feléhez, 20 magasságban a következő szöveget:
+        ctx.strokeText("Points:" + this.points, cWidth / 2, 20);
+    };
+    
+```
+És kész. A gép elkészült. Remélem tényleg nem felejtettünk ki semmilyen apró részletet, amitől ne működne a nagy egész.
+
+Próbáljátok ki!
+
+Hát nem nagyszerű látni, hogy azokból az egyszerű, demó-szerű, szimulációs apróságokból, amiket az első pár fejezetben készítettünk, hova nőtte ki magát a játék? A sok apró részlet együtt működve egy látványos, és összetett, de mégis működő egészet alkot!
+
+Ezzel befejezem a példafeladat leírását. Nyugodtan folytassátok, gondoljátok tovább saját fejlődésetek és kíváncsiságotok javára a játékot. De mindenek előtt próbáljátok felfogni és megérteni azt amit eddig összehoztunk.
+
+15. Fin
+----------------
+
+Remélem fejlődött a javascript programozói gyakorlatotok, és az általános webfejlesztői szemléletetek.
+
+A következőkben néhány olvasnivaló linket sorolok fel:
+[Javascript nyelvi tulajdonságok](http://en.wikipedia.org/wiki/JavaScript#Features)
+[Prototípus öröklés](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Inheritance_and_the_prototype_chain)
+[Osztály minták](http://arjanvandergaag.nl/blog/javascript-class-pattern.html)
+[Javascript tervezési minták](http://addyosmani.com/resources/essentialjsdesignpatterns/book/)
+[További tutorialok](http://superherojs.com/)
+[Az airBnB kódolási stíluskészlete](https://github.com/airbnb/javascript)
+
+
+_A leírást készítette: Szabó Alex, 2015_

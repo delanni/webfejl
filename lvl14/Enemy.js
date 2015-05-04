@@ -4,18 +4,14 @@
  **/
 
 var Enemy = function (x, y, options) {
-    // Ha ránézünk a Circle, kör osztályunkra, láthatjuk, hogy az igazából egy függvény,
-    // aki a this (a kontextus objektum, az éppen konstruált objektum)-on állítgat be dolgokat
-    // ha meghívjuk azt a függvényt úgy, hogy az ottani THIS helyére az itteni, az enemy példányt
-    // jelképező THIS-t rakjuk (erre való az apply hívás, hogy megmondhatjuk ki legyen ott a this), akkor
-    // gyakorlatilag az enemy példányon állítódik be minden konstruktorban beállított tulajdonság.
+    // Ez, a későbbi prototípus beállítással együtt tekinthető leszármaztatásnak
     Circle.apply(this, arguments);
 
     // Saját kép-paraméterei, ami alapján kirajzolásra kerül a sprite, ezt vegyük ki egy egyszerű indexeléssel a prototípus tömbjéből
     this.planeCoords = this.planes[options.planeId || 0];
     this.planeId = options.planeId;
     this.currentPointValue = 1;
-}
+};
 
 // És készítsünk el egy példányt a Circle-ből, aki a prototípusaként fog szolgálni az ellenség osztályunknak
 // A protoípusos öröklésnek ez egy fajta meghurcolása, hogy úgy tudjuk használni, mint objektumorientált környezetben, de működik.
