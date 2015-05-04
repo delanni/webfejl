@@ -1316,11 +1316,112 @@ var gameLoop = function (t) {
     // ...
 };
 ```
+Ezzel tehát minden körben párosával összevetjük és üzköztetjük a játékosunkat és az ágyúgolyókat, az eredményét pedig a konzolon láthatjuk (F12, ha eddig nem nézted volna). Akkor történik ütközés, ha két golyó metszi egymást, vagy ha visszapottyan egy golyó a tankunkra.
 
+Még egy apró dolgot megtehetünk itt, jó lenne lekorlátozni, hogy a tank csak balra és jobbra tudjon menni a földhöz közeli sávon. Ehhez TÖRÖLNI KELL a WS és a fel-le gombokat kezelő sort, és a tankot a földhöz közeli helyre kell tenni a képernyő közepe helyett.
+```javascript
+ // ez a sor felelős a függőleges mozgatásért (handleInputs függvény eleje)
+ // töröljük tehát ki
+ player.speed.y = (keyboard[40]+keyboard[83] - keyboard[38] - keyboard[87])*100;
+ 
+ // valamint a player objektum elkészítésekor más helyre inicializáljuk
+ var player = {
+    // tároljuk a játékos helyét (tegyük a földre)
+    position: new Vector(cWidth / 2, cHeight - 12),
+    
+    // a többi rész érintetlen marad...
+```
 
+A következő lépésben egy nagyon jópofa és látványos dolgot fogunk megcsinálni, ami sokkal egyszerűbb, mint aminek tűnik: rugalmas ütközést a golyók közt.
 
 12. Játék alapok - Rugalmas ütközés
 ---------------
+
+A rugalmas ütközés is egy olyan dolog, amit az emberi agy már nagyon természetesen kezel, és előre becsül, ezért annyira jó látni a játékokban, és annyira rossz, ha nem úgy működik ahogy kellene neki.
+
+Az egész egy 2 dimenziós képleten alapszik, amit a [rugalmas ütközés](http://en.wikipedia.org/wiki/Elastic_collision#Two-Dimensional_Collision_With_Two_Moving_Objects) ezen bekezdésének végén láthatunk. Az ott adott változók (x1,x2,v1,v2) vektorok, tehát a vektorműveleteket kell rájuk értelmeznünk. A < > jelekkel itt a skalárszorzatot jelzik, szóval már ugorhatunk is a Vector.js-hez, hogy kiterjesszük a skalárszorzat implementációval:
+```javascript
+Vector.prototype.scalar = function(other){
+    return other.x * this.x + other.y * this.y;
+};
+```
+
+Ezután már tudjuk értelmezni a képletet, és nem is tűnik olyan nehéznek átírni javascript megfelelőre. 
+
+A kérdés, hogy hol kell ezt alkalmaznunk? Mivel egyelőre nem szeretnénk, hogy a játékosunk rugalmasan ütközzön, csak a golyók egymás közt, így csak a Circle osztályt kell felokosítanunk. Az eddigi logolás helyett implementáljuk a képlettel adott rugalmas ütközést:
+```javascript
+// Próbáljunk meg rugalmas ütköztetést szimulálni
+Circle.prototype.handleCollisionWith = function (other) {
+    // Csak a másik körrel való ütközés esetén
+    if (other instanceof Circle) {
+        // a képletben szereplő változók
+        var v1 = this.speed;
+        var x1 = this.position;
+        var m1 = this.mass;
+        var v2 = other.speed;
+        var x2 = other.position;
+        var m2 = other.mass;
+        
+        // egyszerűsítésként a képletben előforduló vektorkülönbségek
+        var x12Diff = x1.subtract(x2);
+        var x21Diff = x2.subtract(x1);
+        
+        // a képletek megoldása v1 és v2-re
+        var v1New = v1.subtract(x12Diff.scale(2 * m2 / (m1 + m2) * v1.subtract(v2).scalar(x12Diff) / Math.pow(x12Diff.length(), 2)));
+        var v2New = v2.subtract(x21Diff.scale(2 * m1 / (m1 + m2) * v2.subtract(v1).scalar(x21Diff) / Math.pow(x21Diff.length(), 2)));
+        
+        // a kiszámolt értékek lesznek az új sebességei az ütköző entitásoknak
+        this.speed = v1New;
+        other.speed = v2New;
+    }
+};
+```
+Mivel látható, hogy egy objektum ütközésválaszában lekezeljük a teljes rugalmas ütközést, és beállítjuk mindkét fél sebességét, így sejthető, hogy hibához vezetne, ha engednénk mindkét félnek külön-külön meghívni ezt a függvényt ütközéskor, mert akkor 2x történne meg minden, tehát a 2 ütközés 2 sebességcserét eredményezne, ami úgy nézne ki, mintha semmi sem történt volna.
+
+Ennek orvoslására két dolgot tehetünk:
+    az ütközéskezelő függvényben NEM állítjuk be a másik objektum sebességét, és így végrehajthatjuk a vissza irányú ütköztetést is
+    az ütköztetés során mindig csak egy irányban, egyszer ütköztetünk minden párosra
+
+Ha kipróbálnánk az első megoldást, ami programozási szempontból ésszerűbbnek tűnik, hiszen miért törődne az egyik objektum a másikkal mikor ütközik, akkor láthatnánk, hogy mivel a képlet az ütközés pillanatában számítandó mindkét entitás sebességére, azzal, hogy egymás után számítjuk ki a képlet eredményét, rossz viselkedést kapunk. Mire a második ütköztetés jön, addigra az első objektum már sebességet változtatott, tehát a második ütközésnek rossz lesz az inputja.
+
+Tehát maradjunk a második megoldásnál: az ütközés kezelés maradjon ahogy most van, egy függvényhívás beállítja mindkét fél sebességét. Azonban töröljük ki azt a részt, amely mindkét irányban ütközteti a vizsgált entitáspárokat: (_gameScript.js_ _world.checkCollisions_ függvény)
+```javascript
+    // Ha mindkét elem kezel metszést
+    if (e1.intersects && e2.intersects) {
+        // és ha az egyik elem metszi a másikat, és van ütközés kezelő függvénye
+        if (e1.intersects(e2) && e1.handleCollisionWith) {
+            // akkor hívjuk meg az ütközés kezelő függvényét
+            e1.handleCollisionWith(e2);
+        }
+        // Ezt kell kitörölni -->
+        /*
+        if (e2.intersects(e1) && e2.handleCollisionWith) {
+            e2.handleCollisionWith(e1);
+        }
+        */
+    }
+```
+Ezzel megoldottuk, hogy csak egy irányban történik az ütközés, és mivel csak a kör osztályunkra írtuk meg, így az eredményt akkor látjuk, ha két golyót egymásnak lövünk. Célózzunk tehát az ég felé, és próbáljuk meg eltalálni a zuhanó ágyúgolyóinkat. 
+
+Kozmetikai jelleggel megoldható, hogy az ágyúgolyók ne mindig egyszínűek legyenek, és jobban érzékeljük az ütközésüket. Ezért generálhatunk véletlen színt minden új kilőtt golyónak. 
+
+Ezt természetesen a _gameScript.js_-ben tehetjük meg, azon a részen, ahol a kattintást kezeljük, és ennek hatására robbanást generálunk. A megváltoztatandó kódsort a következő részletben kommenttel jelölöm:
+
+```javascript
+/// ... world.handleInputs függvényében
+if (mouse.left) {
+            var explosion = new Explosion({
+                particles: [new Circle(0, 0, {
+                    size: 10,
+                    // A color: ... sort változtassuk meg erre, hogy véletlenszerűen generáljunk új színeket
+                    color: "hsl(" + Math.floor(Math.random()*360) + ",100%,50%)",
+                    friction: 0.005,
+                    world: world,
+                    mass: 2,
+                    speed: playerToMouseVector.clone().normalize().scaleInPlace(700),
+                    life: 10000
+                })],
+```
 
 13. Rendszerezés, refaktorálás
 ---------------
@@ -1328,6 +1429,5 @@ var gameLoop = function (t) {
 14. Játék logika - Ellenségek
 ---------------
 
-    
 
 _A leírást készítette: Szabó Alex, `<time datetime="2015-04-10 19:00">2015</time>`_
