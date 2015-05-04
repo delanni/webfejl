@@ -1426,7 +1426,207 @@ if (mouse.left) {
 13. Rendszerezés, refaktorálás
 ---------------
 
-Ebben a lépésben nem fogunk új képességet vinni a játékba, hanem inkább megpróbáljuk a kódot egy kicsit rendbetenni, mielőtt az utolsó felvonást elkezdjük. A refaktorálás általában kód újraszervezést jelent, a mi esetünkben most ez csak annyit jelent, hogy a játékos és világ objektumainkból olyan osztályokat csinálunk, amelyekkel számos játékost, vagy világot tudnánk generálni. Még ha csak 1-1 darabot is akarunk készíteni belőlük, érdemes osztályokba szervezni őket, hogy ne egy fájlt szennyezzünk tele a nem igazán releváns kódrészletekkel. Így tehát kivonunk egy csomó kódot a _gameScript.js_-ből, és létrehozzuk a _Player.js_-t, és a _World.js_-t.
+Ebben a lépésben nem fogunk új képességet vinni a játékba, hanem inkább megpróbáljuk a kódot egy kicsit rendbetenni, mielőtt az utolsó felvonást elkezdjük. A refaktorálás általában kód újraszervezést jelent, a mi esetünkben most ez csak annyit jelent, hogy a játékos és világ objektumainkból olyan osztályokat csinálunk, amelyekkel számos játékost, vagy világot tudnánk generálni. Még ha csak 1-1 darabot is akarunk készíteni belőlük, érdemes osztályokba szervezni őket, hogy ne egy fájlt szennyezzünk tele a nem igazán releváns kódrészletekkel. Így tehát kivonunk egy csomó kódot a _gameScript.js_-ből, és létrehozzuk a _Player.js_-t, és a _World.js_-t, és közben megtanulunk egy másik módszert az osztályok szimulálására.
+
+Kezdjük a World osztállyal, hozzuk létre a World.js-t, hivatkozzuk be az _index.html_-ben, és másoljuk át bele a _gameScript.js_-ben lévő _world_ változónkat, majd alakítsuk osztállyá.
+```javascript
+// Legyen a World függvény a konstruktor
+var World = function () {
+    // A tulajdonságokat a this objektumra tehetjük
+    this.gravity = new Vector(0, 200);
+    this.entities = [];
+    this.drawables = [];
+    this.animatables = [];
+    
+    // A függvényeket is rátehetjük a this objektumra, így elérhetők lesznek a World példányokon
+    this.insert = function (entity, asDrawable, asAnimatable) {
+        // A kódban a world előfordulásokat this-re cserélhetjük, a this jelenti az éppen elkészülő objektumot
+        entity.world = this;
+        this.entities.push(entity);
+        if (asDrawable) {
+            this.drawables.push(entity);
+        }
+        if (asAnimatable) {
+            this.animatables.push(entity);
+        }
+    };
+
+    this.remove = function (entity) {
+        for (var i = 0; i < this.entities.length; i++) {
+            if (this.entities[i] == entity) {
+                this.entities.splice(i, 1);
+                break;
+            }
+        }
+        for (var i = 0; i < this.drawables.length; i++) {
+            if (this.drawables[i] == entity) {
+                this.drawables.splice(i, 1);
+                break;
+            }
+        }
+        for (var i = 0; i < this.animatables.length; i++) {
+            if (this.animatables[i] == entity) {
+                this.animatables.splice(i, 1);
+                break;
+            }
+        }
+    };
+
+    this.draw = function (ctx) {
+        for (var i = 0; i < this.drawables.length; i++) {
+            var drawable = this.drawables[i];
+            drawable.drawTo(ctx);
+        }
+    };
+
+    this.simulate = function (time) {
+        for (var i = 0; i < this.animatables.length; i++) {
+            var animatable = this.animatables[i];
+            animatable.animate(time);
+        }
+    };
+
+    this.checkCollisions = function () {
+
+        for (var i = 0; i < this.entities.length; i++) {
+            for (var j = i + 1; j < this.entities.length; j++) {
+                var e1 = this.entities[i];
+                var e2 = this.entities[j];
+
+                if (e1.intersects && e2.intersects) {
+                    if (e1.intersects(e2) && e1.handleCollisionWith) {
+                        e1.handleCollisionWith(e2);
+                    }
+                }
+            }
+        }
+    };
+    
+    // mire idáig eljutunk, a kezdetben üres this objektum már rendelkezik minden olyan tulajdonsággal és függvénnyel, ami ahhoz kell, hogy worldként viselkedjen.
+    // Így is lehet osztályokat szimulálni. a konstruktorfüggvényben a this-re aggatunk rá minden tulajdonságot és függvényt.
+};
+```
+Láthattuk, hogy egy objektum kulcsai helyett a _this_ objektumot kezeltük úgy, mint az éppen készítendő _World_ példányt, és rajta állítottunk be tulajdonságokat és függvényeket.
+
+Ennek mintájára megcsinálhatjuk a játékos osztályt, a _Player.js_ fájlba:
+```javascript
+// A játékos osztályunk is hasonló az összes többihez, egy-az-egyben az objektumpéldányt alakíthatjuk át osztállyá.
+var Player = function (options) {
+    // A tulajdonságokat ráaggatjuk a this objektumra, aki az elkészítendő példányt jelenti
+    this.position = options.position || new Vector();
+    this.speed = new Vector();
+    this.cannonVector = new Vector();
+    this.color = options.color || "blueviolet";
+
+    // A függvényeket a this-re is rátehetjük, hiszen akkor is megjelenik a játékoson
+    this.drawTo = function (ctx) {
+        ctx.fillStyle = this.color;
+
+        ctx.beginPath();
+        ctx.arc(this.position.x, this.position.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillRect(this.position.x - 12, this.position.y + 6 - 4, 24, 8);
+
+        ctx.beginPath();
+
+        ctx.moveTo(this.position.x, this.position.y);
+
+        ctx.lineTo(this.position.x + this.cannonVector.x, this.position.y + this.cannonVector.y);
+        ctx.stroke();
+    };
+
+    this.animate = function (time) {
+        this.position.addInPlace(this.speed.scale(time / 1000));
+    };
+
+    this.intersects = function (other) {
+        var playersBoundingCircleRadius = 8;
+        
+        if (other instanceof Square) {
+            var boundingCircleRadius = Math.sqrt(2) * other.size / 2;
+        } else if (other instanceof Circle) {
+            var boundingCircleRadius = other.size;
+        }
+        var distance = other.position.subtract(this.position).length();
+        if (distance < (playersBoundingCircleRadius + boundingCircleRadius)) {
+            return true;
+        } else {
+            return false;
+        }
+    };
+
+    this.handleCollisionWith = function (other) {
+        if (other instanceof Circle) {
+            if (other.speed.y > 0) {
+                // Játékossal való ütközés, akár halál is lehetne :)
+            }
+        }
+    };
+
+    // Ha csinálunk egy egyszerű változót, az nem kerül rá a player példányokra, szóval a kívülről elérni nem kívánt tuljadonságokat így elrejthetjük.
+    var fireColors = ['#FFFF47', '#FFBC42', '#FF5A1D'];
+
+    this.handleInputs = function (mouse, keyboard) {
+        var mousePos = new Vector(mouse.x, mouse.y);
+
+        this.speed.x = (keyboard[39] + keyboard[68] - keyboard[37] - keyboard[65]) * 100;
+        this.cannonVector = mousePos.subtract(this.position).normalize().scaleInPlace(15);
+
+        var cannonEnd = this.position.add(this.cannonVector);
+        var playerToMouseVector = mousePos.subtract(this.position);
+
+        var _world = this.world;
+
+        if (mouse.left) {
+            var explosion = new Explosion({
+                particles: [new Circle(0, 0, {
+                    size: 10,
+                    color: "hsl(" + Math.floor(Math.random() * 360) + ",90%,40%)",
+                    friction: 0.005,
+                    world: _world,
+                    mass: 2,
+                    speed: playerToMouseVector.clone().normalize().scaleInPlace(700),
+                    life: 10000
+                })],
+                generator: function () {
+                    return new Square(0, 0, {
+                        size: 3,
+                        color: fireColors[Math.floor(Math.random() * 3)],
+                        friction: 0.05 + Math.random() * 0.001,
+                        world: _world,
+                        mass: Math.random(),
+                        life: Math.random() * 200 + 800
+                    });
+                },
+                world: _world,
+                particlesCount: 10,
+                strengthMin: 100,
+                strengthMax: 400,
+                coneWidth: Math.PI / 8,
+                coneOffset: Math.atan2(-playerToMouseVector.y, playerToMouseVector.x)
+            });
+
+            explosion.fire(cannonEnd);
+            mouse.left = 0;
+        }
+    };
+};
+```
+
+Mivel már van egy olyan osztályunk, amivel világokat tudunk példányosítani, és egy olyan is, amivel játékosokat, a _gameScript.js_-ben leegyszerűsíthetjük ezeket a részeket:
+```javascript
+var world = new World();
+var player = new Player({
+    position: new Vector(cWidth/2, cHeight-12),
+    color: "#71c"
+});
+world.insert(player, true, true);
+```
+
+Ugye mennyivel szebb és átláthatóbb? Nyilván nagyon sok nem-triviális részletet rejtettünk el a World és Player osztályokban, de azoknak igazából ott is a helyük, és nem a játék magasabb absztrakciós szintű nézetével egy helyen.
+
+Ha mindent jól csináltunk, a játékunk ugyanúgy fut ahogy eddig, annyi változott csak, hogy a _world_ és a _player_ példányaink példányosítással készülnek objektum literálok helyett.
 
 14. Játék logika - Ellenségek
 ---------------
