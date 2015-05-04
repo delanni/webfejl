@@ -1379,8 +1379,8 @@ Circle.prototype.handleCollisionWith = function (other) {
 Mivel látható, hogy egy objektum ütközésválaszában lekezeljük a teljes rugalmas ütközést, és beállítjuk mindkét fél sebességét, így sejthető, hogy hibához vezetne, ha engednénk mindkét félnek külön-külön meghívni ezt a függvényt ütközéskor, mert akkor 2x történne meg minden, tehát a 2 ütközés 2 sebességcserét eredményezne, ami úgy nézne ki, mintha semmi sem történt volna.
 
 Ennek orvoslására két dolgot tehetünk:
-    az ütközéskezelő függvényben NEM állítjuk be a másik objektum sebességét, és így végrehajthatjuk a vissza irányú ütköztetést is
-    az ütköztetés során mindig csak egy irányban, egyszer ütköztetünk minden párosra
+ * az ütközéskezelő függvényben NEM állítjuk be a másik objektum sebességét, és így végrehajthatjuk a vissza irányú ütköztetést is
+ * az ütköztetés során mindig csak egy irányban, egyszer ütköztetünk minden párosra
 
 Ha kipróbálnánk az első megoldást, ami programozási szempontból ésszerűbbnek tűnik, hiszen miért törődne az egyik objektum a másikkal mikor ütközik, akkor láthatnánk, hogy mivel a képlet az ütközés pillanatában számítandó mindkét entitás sebességére, azzal, hogy egymás után számítjuk ki a képlet eredményét, rossz viselkedést kapunk. Mire a második ütköztetés jön, addigra az első objektum már sebességet változtatott, tehát a második ütközésnek rossz lesz az inputja.
 
@@ -1425,6 +1425,8 @@ if (mouse.left) {
 
 13. Rendszerezés, refaktorálás
 ---------------
+
+Ebben a lépésben nem fogunk új képességet vinni a játékba, hanem inkább megpróbáljuk a kódot egy kicsit rendbetenni, mielőtt az utolsó felvonást elkezdjük. A refaktorálás általában kód újraszervezést jelent, a mi esetünkben most ez csak annyit jelent, hogy a játékos és világ objektumainkból olyan osztályokat csinálunk, amelyekkel számos játékost, vagy világot tudnánk generálni. Még ha csak 1-1 darabot is akarunk készíteni belőlük, érdemes osztályokba szervezni őket, hogy ne egy fájlt szennyezzünk tele a nem igazán releváns kódrészletekkel. Így tehát kivonunk egy csomó kódot a _gameScript.js_-ből, és létrehozzuk a _Player.js_-t, és a _World.js_-t.
 
 14. Játék logika - Ellenségek
 ---------------
