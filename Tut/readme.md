@@ -1886,12 +1886,12 @@ Ezzel befejezem a példafeladat leírását. Nyugodtan folytassátok, gondolját
 Remélem fejlődött a javascript programozói gyakorlatotok, és az általános webfejlesztői szemléletetek.
 
 A következőkben néhány olvasnivaló linket sorolok fel:
-[Javascript nyelvi tulajdonságok](http://en.wikipedia.org/wiki/JavaScript#Features)
-[Prototípus öröklés](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Inheritance_and_the_prototype_chain)
-[Osztály minták](http://arjanvandergaag.nl/blog/javascript-class-pattern.html)
-[Javascript tervezési minták](http://addyosmani.com/resources/essentialjsdesignpatterns/book/)
-[További tutorialok](http://superherojs.com/)
-[Az airBnB kódolási stíluskészlete](https://github.com/airbnb/javascript)
+ * [Javascript nyelvi tulajdonságok](http://en.wikipedia.org/wiki/JavaScript#Features)
+ * [Prototípus öröklés](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Inheritance_and_the_prototype_chain)
+ * [Osztály minták](http://arjanvandergaag.nl/blog/javascript-class-pattern.html)
+ * [Javascript tervezési minták](http://addyosmani.com/resources/essentialjsdesignpatterns/book/)
+ * [További tutorialok](http://superherojs.com/)
+ * [Az airBnB kódolási stíluskészlete](https://github.com/airbnb/javascript)
 
 
 _A leírást készítette: Szabó Alex, 2015_
