@@ -57,7 +57,7 @@ var world = {
 				particlesCount: 10,
 				strengthMin: 100,
 				strengthMax: 400,
-				coneWidth:Math.PI/8,
+				coneWidth:Math.PI/6,
 				coneOffset: Math.atan2(-mousePos.clone().subtract(cannonpos).y, mousePos.clone().subtract(cannonpos).x)
 			});
 			

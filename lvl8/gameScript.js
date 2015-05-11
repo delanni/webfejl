@@ -102,7 +102,7 @@ canvas.onmousemove = canvas.onmousedown = canvas.onmouseup = function(ev) {
 	var rect = canvas.getBoundingClientRect();
 	mouse.x = ev.offsetX || ev.clientX - rect.left;
 	mouse.y = ev.offsetY || ev.clientY - rect.top;
-	mouse.left = ev.buttons & 1;
+	mouse.left = (ev.buttons & 1) || (ev.which & 1);
 };
 var keyboard = {};
 
