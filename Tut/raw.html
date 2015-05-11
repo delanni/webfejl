@@ -1,0 +1,1852 @@
+<article class="markdown-body entry-content" itemprop="mainContentOfPage"><h2>
+<a id="user-content-játék-készítése-javascript-ben-canvas-szel" class="anchor" href="#j%C3%A1t%C3%A9k-k%C3%A9sz%C3%ADt%C3%A9se-javascript-ben-canvas-szel" aria-hidden="true"><span class="octicon octicon-link"></span></a>Játék készítése Javascript-ben, Canvas-szel</h2>
+
+<p>A következõkben egy meglehetõsen hosszú cikkben végigviszem egy egyszerû HTML5 játék fejlesztését az alapoktól a kész játékig. A fejlesztés során nem használok mást, mint a HTML5 Javascript és Canvas eszköztárát, és egy külsõ forrásból származó képet.</p>
+
+<p>A javascript a böngészõk által futtatott scriptnyelv/programozási nyelv. A legfõbb használati területe a weboldalak interaktívvá tétele felhasználói input kezeléssel, animációval, és programozott eseményekkel. A javascript futtatómotorok kifinomultságának köszönhetõen olyan jó végrehajtási sebességgel rendelkeznek a böngészõk, hogy játékokat is készíthetünk kizárólag kliens oldali kóddal. A játékok javascript kód formájában íródnak, és megjelenítéshez a HTMLCanvasElement példányait, a &lt;canvas&gt; elemeket használják.</p>
+
+<p>Az elkészülõ játék egy egyszerû ügyességi játék lesz, amiben egy tankkal kell repülõket lelõni. A játék esztétikai célból némi fizikát és részecskerendszert is tartalmaz, a játéklogikához szükséges mozgatás, megjelenítés és ütközésdetektálásokon kívül.
+A játék elkészítését azzal vezetjük fel, hogy felépítünk egy világot, ami otthont képes adni jópár hasonló játéknak, hiszen kezelni fog néhány alapvetõ fizikai törvényt, és látványos hatást. Ez az általános fejlesztési rész a 9. fejezetig tart, utána átalakítjuk úgy, hogy a fent említett ügyességi játék legyen.</p>
+
+<p>A fejlesztés 14 nagyobb lépésben történik. Ezek sorban a következõk:</p>
+
+<ol>
+<li><a href="#1-a-projekt-alapjai">A projekt alapjai</a></li>
+<li><a href="#2-a-canvas-%C3%A9s-a-renderloop-alapjai">A canvas és a renderloop alapjai</a></li>
+<li><a href="#3-a-j%C3%A1t%C3%A9kvil%C3%A1g-%C3%A9s-rajzol%C3%A1s-a-canvas-en">A játékvilág és rajzolás a canvas-en</a></li>
+<li><a href="#4-j%C3%A1t%C3%A9kelemek-anim%C3%A1ci%C3%B3ja">Játékelemek animációja</a></li>
+<li><a href="#5-vektor-%C3%A9s-n%C3%A9gyzet-oszt%C3%A1lyok-p%C3%A9ld%C3%A1nyos%C3%ADt%C3%A1s">Vektor és négyzet osztályok, példányosítás</a></li>
+<li><a href="#6-inputkezel%C3%A9s">Inputkezelés</a></li>
+<li><a href="#7-pszeudo-fizikai-megk%C3%B6zel%C3%ADt%C3%A9s">Pszeudo-fizikai megközelítés</a></li>
+<li><a href="#8-pszeudo-fizika-gravit%C3%A1ci%C3%B3">Pszeudo-fizika, gravitáció</a></li>
+<li><a href="#9-%C3%81gy%C3%BA-%C3%A9s-robban%C3%A1sok">Ágyú és robbanások</a></li>
+<li><a href="#10-j%C3%A1t%C3%A9k-alapok---a-tank">Játék alapok - A tank</a></li>
+<li><a href="#11-j%C3%A1t%C3%A9k-alapok---%C3%9Ctk%C3%B6z%C3%A9sdetekt%C3%A1l%C3%A1s">Játék alapok - Ütközésdetektálás</a></li>
+<li><a href="#12-j%C3%A1t%C3%A9k-alapok---rugalmas-%C3%BCtk%C3%B6z%C3%A9s">Játék alapok - Rugalmas ütközés</a></li>
+<li><a href="#13-rendszerez%C3%A9s-refaktor%C3%A1l%C3%A1s">Rendszerezés, refaktorálás</a></li>
+<li><a href="#14-j%C3%A1t%C3%A9k-logika---ellens%C3%A9gek">Játék logika - Ellenségek</a></li>
+<li><a href="#15-fin">Vége</a></li>
+</ol>
+
+<p>Az út hosszú, de tanulságos. A forráskódot folyamatosan javítjuk és szépítjük, hogy a végén egy jól áttekinthetõ kódunk legyen.</p>
+
+<h2>
+<a id="user-content-1-a-projekt-alapjai" class="anchor" href="#1-a-projekt-alapjai" aria-hidden="true"><span class="octicon octicon-link"></span></a>1. A projekt alapjai</h2>
+
+<p>Miután nulladik lépésként vettünk egy nagy levegõt, és átgondoltuk, hogy is fogjuk felépíteni a játékot, elsõ lépésként felejtsük el amin fáradalmasan gondolkoztunk, és essünk neki a fájlok gyártásának, és a dolog majd alakulni fog magától.</p>
+
+<p>Készítsünk egy <em>index.html</em> fájlt, amiben a játékunkat fogjuk megjeleníteni, és készítsünk hozzá egy <em>gameScript.js</em> fájlt, amibe a játékot megvalósító javascript kód fog kerülni a késõbbiekben.</p>
+
+<p>Az <em>index.html</em>-ben ágyazzunk meg a szokásos általános HTML alapokkal, dokumentum típus deklaráció, html tag, head és body tagek, lokális stíluslap, és egy canvas elem, amin végül a rajzolás fog történni. A dokumentum végén pedig egy script tagben húzzuk be az egyelõre üres javascript fájlunkat. A végeredmény így néz ki:</p>
+
+<div class="highlight highlight-html"><pre>&lt;!DOCTYPE html&gt;
+&lt;<span class="pl-ent">html</span>&gt;
+&lt;<span class="pl-ent">head</span>&gt;
+    &lt;<span class="pl-ent">meta</span> <span class="pl-e">encoding</span>=<span class="pl-s"><span class="pl-pds">'</span>utf-8<span class="pl-pds">'</span></span> /&gt;
+    <span class="pl-c">&lt;!-- Stíluslap egy egyszerû felépítéséhez--&gt;</span>
+<span class="pl-s1">    &lt;<span class="pl-ent">style</span>&gt;</span>
+<span class="pl-s1">        <span class="pl-ent">body</span>{</span>
+<span class="pl-s1">            <span class="pl-c1"><span class="pl-c1">margin</span></span>:<span class="pl-c1">0</span>;</span>
+<span class="pl-s1">            <span class="pl-c1"><span class="pl-c1">padding</span></span>:<span class="pl-c1">0</span>;</span>
+<span class="pl-s1">            <span class="pl-c1"><span class="pl-c1">background-color</span></span>:<span class="pl-c1">#aaa</span>;</span>
+<span class="pl-s1">        }</span>
+<span class="pl-s1">        <span class="pl-e">#gameCanvas</span>{</span>
+<span class="pl-s1">            <span class="pl-c1"><span class="pl-c1">border</span></span>: <span class="pl-c1">1<span class="pl-k">px</span></span> <span class="pl-c1">solid</span> <span class="pl-c1">#666</span>;</span>
+<span class="pl-s1">            <span class="pl-c1"><span class="pl-c1">margin-left</span></span>:<span class="pl-c1">auto</span>;</span>
+<span class="pl-s1">            <span class="pl-c1"><span class="pl-c1">margin-right</span></span>:<span class="pl-c1">auto</span>;</span>
+<span class="pl-s1">            <span class="pl-c1"><span class="pl-c1">margin-top</span></span>: <span class="pl-c1">5<span class="pl-k">%</span></span>;</span>
+<span class="pl-s1">            <span class="pl-c1"><span class="pl-c1">display</span></span>:<span class="pl-c1">block</span>;</span>
+<span class="pl-s1">        }</span>
+<span class="pl-s1">    &lt;/<span class="pl-ent">style</span>&gt;</span>
+&lt;/<span class="pl-ent">head</span>&gt;
+&lt;<span class="pl-ent">body</span>&gt;
+    <span class="pl-c">&lt;!-- A fõ elem, a Canvas, a vászon ahova rajzolgatunk --&gt;</span>
+    &lt;<span class="pl-ent">canvas</span> <span class="pl-e">id</span>=<span class="pl-s"><span class="pl-pds">'</span>gameCanvas<span class="pl-pds">'</span></span> <span class="pl-e">width</span>=<span class="pl-s"><span class="pl-pds">'</span>640<span class="pl-pds">'</span></span> <span class="pl-e">height</span>=<span class="pl-s"><span class="pl-pds">'</span>480<span class="pl-pds">'</span></span>&gt; &lt;/<span class="pl-ent">canvas</span>&gt;
+    <span class="pl-c">&lt;!-- Húzzuk be a scriptet is, ami a játékot valósítja meg --&gt;</span>
+<span class="pl-s1">    &lt;<span class="pl-ent">script</span> <span class="pl-e">src</span>=<span class="pl-s"><span class="pl-pds">'</span>gameScript.js<span class="pl-pds">'</span></span> <span class="pl-e">type</span>=<span class="pl-s"><span class="pl-pds">'</span>text/javascript<span class="pl-pds">'</span></span>&gt;&lt;/<span class="pl-ent">script</span>&gt;</span>
+&lt;/<span class="pl-ent">body</span>&gt;
+&lt;/<span class="pl-ent">html</span>&gt;</pre></div>
+
+<p>A stílusokkal ki szerettem volna emelni, hogy középen már ott van egy vászon, amin még egyelõre nem történik semmi. Ha ezt megnyitjuk egy böngészõben, akkor láthatjuk, hogy a háttér színétõl kicsit eltérõ színben, kerettel ott egy HTMLCanvasElement, ami a további munkánk alapját fogja képezni.</p>
+
+<h2>
+<a id="user-content-2-a-canvas-és-a-renderloop-alapjai" class="anchor" href="#2-a-canvas-%C3%A9s-a-renderloop-alapjai" aria-hidden="true"><span class="octicon octicon-link"></span></a>2. A canvas és a renderloop alapjai</h2>
+
+<p>A második lépésben a HTML Canvas rajzolást készítjük elõ, és egy alapvetõ ciklust készítünk a játékhoz, ami folyamatosan frissíteni fogja, és kirajzolja a játékunk világának állapotát. Lássunk is hozzá, ehhez az eddig üresen várakozó <em>gameScript.js</em> fájlt kell szerkesztenünk. Amit ide írunk, annak hatását a HTML-ben lévõ hivatkozás miatt az <em>index.html</em>-ben látjuk.</p>
+
+<p>Valamilyen szelektorokkal fogjuk meg az alap DOM elemeket, amiket használni fogunk, és csináljunk változókat a gyakran használatos tulajdonságaiknak, pl.: a vászon szélességének, és hosszának.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> canvas <span class="pl-k">=</span> <span class="pl-c1">document</span>.<span class="pl-c1">getElementById</span>(<span class="pl-s"><span class="pl-pds">"</span>gameCanvas<span class="pl-pds">"</span></span>);
+<span class="pl-k">var</span> cWidth <span class="pl-k">=</span> canvas.<span class="pl-c1">width</span>;
+<span class="pl-k">var</span> cHeight <span class="pl-k">=</span> canvas.<span class="pl-c1">height</span>;
+<span class="pl-k">var</span> ctx <span class="pl-k">=</span> canvas.getContext(<span class="pl-s"><span class="pl-pds">"</span>2d<span class="pl-pds">"</span></span>);</pre></div>
+
+<p>Valójában a <em>canvas</em> nevû változót nem sokat fogjuk használni, hiszen az összes rajz mûvelet valójában a vászon <em>render kontextusán</em> (<em>ctx</em>) fog történni. Ezért ezt is külön változóba helyeztük.</p>
+
+<p>Készítsünk egy alap függvényt, ami törli a vásznat. Ez a függvény paraméterül kapja a törlendõ kontextust, és azt teljes egészében halvány szürkére színezi. </p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> <span class="pl-en">clearCtx</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(){
+    <span class="pl-c">// Miután szürkére állítottuk az ecsetünk színét, rajzoljunk egy pont akkora téglalapot, ami lefedi a teljes vásznat.</span>
+    ctx.fillStyle <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>#eeeeee<span class="pl-pds">"</span></span>;
+    <span class="pl-c">// Ehhez a kontextus fillRect függvényét használjuk, ami (x,y,szélesség, hosszúság) formájában téglalapot rajzol.</span>
+    ctx.fillRect(<span class="pl-c1">0</span>,<span class="pl-c1">0</span>,cWidth,cHeight);
+};</pre></div>
+
+<p>Miután ez a függvényünk megvan, már csak valamilyen módon kell egy örökké futó ciklust készítenünk, ami ezt a függvényt hívogatja. A böngészõkben van egy pár lehetõségünk idõzítve hívogatni függvényeket, például a <em>setTimeout</em> vagy <em>setInterval</em> függvények. A modern böngészõkön azonban adott egy <em>requestAnimationFrame</em> függvény, amely másodpercenként 60-nál többször nem hívja meg a függvényt. Ezt a függvényt ajánlják az animációk és játékok idõzítésének üzemeltetéséhez, így mi is ezt használjuk a következõkben.</p>
+
+<p>Az idõzítendõ függvényünk lesz a játék fõciklusa (<em>render loop</em> vagy <em>game loop</em>), aminek egyelõre a dolga a kép letörlése és önmaga idõzítése.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> <span class="pl-en">gameLoop</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(){
+    <span class="pl-c1">window</span>.requestAnimationFrame(gameLoop);
+    clearCtx();
+};
+
+gameLoop(); <span class="pl-c">// Kell egy legelsõ hívás, hogy elinduljon a ciklus</span></pre></div>
+
+<p>A böngészõben most egy világos szürke vásznat kell látnunk. Bár ez még nem látványos, tudnunk kell, hogy ez a ciklus lesz minden alapja.</p>
+
+<h2>
+<a id="user-content-3-a-játékvilág-és-rajzolás-a-canvas-en" class="anchor" href="#3-a-j%C3%A1t%C3%A9kvil%C3%A1g-%C3%A9s-rajzol%C3%A1s-a-canvas-en" aria-hidden="true"><span class="octicon octicon-link"></span></a>3. A játékvilág és rajzolás a canvas-en</h2>
+
+<p>Kezdjünk el objektumokat gyártani! Gyakori megközelítés a játékoknál, hogy készítünk egy <em>World objektumot</em>, amely tartalmazza (referenciája van rá) a játékban lévõ összes entitást, egyedet, akit ki kell rajzolni, vagy animálni kell, vagy mindenesetre jó ha tudunk róla, hogy a világunkhoz tartozik. A world objektum a böngészõisten noteszfüzete, ahol nyilvántartja a világ állapotát. </p>
+
+<p>Készítsünk tehát egy világ objektumot, ez az objektum tartalmazzon egy tömböt, aki nyilvántartja az összes kirajzolható entitást. Ezeken fogunk végigiterálni a render ciklusban, és rajzoljuk ki egyesével õket.</p>
+
+<p>Majd pedig készítsünk egy négyzet objektumot, amely kirajzolható, ezért tegyünk rá egy <em>drawTo</em> függvényt, amely paraméterül kap egy kontextust, és kirajzolja rá a négyzetet, valahogyan, akárhogyan. Az objektum literálokról <a href="http://www.dyn-web.com/tutorials/object-literal/">itt</a> találhattok rövid leírást. Lényegében annyit kell tudni róla, hogy értékek halmazát tárolhatjuk egy objektumban, és minden értéket a saját kulcsa különböztet meg. Készítéskor a literál szintaxissal a {} jelek közt kulcs:érték felsorolást teszünk, és ezek lesznek elérhetõk egy objektumon.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Világ objektum, egy tulajdonsága van, drawables, ami egy üres lista, tömb</span>
+<span class="pl-k">var</span> world <span class="pl-k">=</span> {
+    drawables<span class="pl-k">:</span> []
+};
+
+<span class="pl-c">// Négyzet objektum, egy függvénye van, a drawTo</span>
+<span class="pl-c">// abban mondja meg magáról az objektum, hogy ÕT hogyan és hova kell kirajzolni</span>
+<span class="pl-k">var</span> square <span class="pl-k">=</span> {
+    <span class="pl-en">drawTo</span> : <span class="pl-k">function</span>(<span class="pl-smi">context</span>){
+        <span class="pl-c">// Hexa formátumban megadott színinfó</span>
+        context.fillStyle <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>#eb01aa<span class="pl-pds">"</span></span>;
+        <span class="pl-c">// x, y, szélesség, hosszúság</span>
+        context.fillRect(<span class="pl-c1">100</span>,<span class="pl-c1">100</span>,<span class="pl-c1">30</span>,<span class="pl-c1">30</span>);
+    }
+};
+
+<span class="pl-c">// Adjuk õt hozzá a világhoz, hogy megjelenjen a renderelés során</span>
+world.drawables.<span class="pl-c1">push</span>(square);</pre></div>
+
+<p>Tehát elkészült egy világ. Elkészült egy négyzet, akinek van egy függvénye, amit hívva kirajzoljuk. Majd a négyzetet a világ rajzolható objektumokat tartalmazó tömbjébe helyeztük.</p>
+
+<p>Nincs más dolgunk, mint a render ciklusban egy jól formált for ciklussal végigmenni az összes elemén, és kirajzolni õket. Ehhez írjuk át a <em>gameLoop</em> függvényünket a következõképp:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> <span class="pl-en">gameLoop</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(){
+    <span class="pl-c1">window</span>.requestAnimationFrame(gameLoop);
+    clearCtx();
+
+    <span class="pl-c">// Kirajzoljuk az összes kirajzolható elemet</span>
+    <span class="pl-k">for</span>(<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>;i<span class="pl-k">&lt;</span>world.drawables.<span class="pl-c1">length</span>;i<span class="pl-k">++</span>){
+        <span class="pl-k">var</span> drawable <span class="pl-k">=</span> world.drawables[i];
+        drawable.drawTo(ctx);
+    }
+};</pre></div>
+
+<p>Mint látható, a render ciklusban a világ állapotaként tárolt objektumokon (ami egyelõre 1 db négyzet) lovaglunk végig, és rajzoljuk ki õket. Ezek eredményeképp látunk egy négyzetet a (100,100) koordinátapártól kezdõdõen (30,30) méretben.</p>
+
+<h2>
+<a id="user-content-4-játékelemek-animációja" class="anchor" href="#4-j%C3%A1t%C3%A9kelemek-anim%C3%A1ci%C3%B3ja" aria-hidden="true"><span class="octicon octicon-link"></span></a>4. Játékelemek animációja</h2>
+
+<p>A statikus világból a mozgó világba úgy jutunk el, ha az elõzõ, rajzolási módszer analógiájára elkészítjük az animálhatók tömbjét, és a render ciklusban ezen is végigsétálunk. Tároljuk tehát az összes mozgatható, animálható element egy tömbben a világ objektumunkon. Ezt ugye gond nélkül megtehetjük, és egy elemet (például az elõzõ négyzetünket) belehelyezhetünk egyszerre a rajzolhatók és az animálhatók tömbjébe is, mert a javascript objektumokról tetszõleges referenciát készíthetünk. (Hiszen amikor tömbökbe teszünk egy objektumot, akkor az igazi objektum a memóriában csak egy példányban él, de több helyrõl hivatkoznak ugyanarra az egy objektumra).</p>
+
+<p>Tehát egy újabb tömb (1) a világon, egy újabb függvény (2) a négyzeten, és egy újabb ciklus (3) a játék fõciklusában. Ez utóbbi a (2) függvényt hívogatja miközben az (1) elemein megy végig sorban. Továbbá a négyzet (4) objektumunkat úgy turbózzuk fel, hogy õ tárolja magáról, hogy hol és hogyan létezik, a <em>drawTo</em> ez alapján rajzolja majd ki, és az <em>animate</em> ezen tulajdonságait változtathatja.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> world <span class="pl-k">=</span> {
+    drawables<span class="pl-k">:</span> [],
+    <span class="pl-c">// Olyan objektumokat várunk, akiken van egy .animate(time:number) függvény, amit a szimuláció során meghívhatunk</span>
+    animatables<span class="pl-k">:</span> [] <span class="pl-c">// (1)</span>
+};
+
+<span class="pl-c">// Az objektumunknak tárolnia kell, hogy pl. hol van, hogy azt körrõl körre tudjuk rajta animálni  </span>
+<span class="pl-c">// (4)</span>
+<span class="pl-k">var</span> square <span class="pl-k">=</span> {
+    position <span class="pl-k">:</span> [<span class="pl-c1">100</span>,<span class="pl-c1">100</span>],
+    size <span class="pl-k">:</span> [<span class="pl-c1">30</span>,<span class="pl-c1">30</span>]
+};
+
+<span class="pl-c">// A függvényeket a következõ módon is elhelyezhetjük az objektumon, miután az már elkészült:</span>
+<span class="pl-c1">square</span>.<span class="pl-en">drawTo</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">context</span>){
+    context.fillStyle <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>#eb01aa<span class="pl-pds">"</span></span>;
+    <span class="pl-c">// A kirajzolás az aktuális állapotot tükrözi, a négyzet helye és mérete szerint</span>
+    context.fillRect(<span class="pl-v">this</span>.position[<span class="pl-c1">0</span>], <span class="pl-v">this</span>.position[<span class="pl-c1">1</span>], <span class="pl-v">this</span>.<span class="pl-c1">size</span>[<span class="pl-c1">0</span>], <span class="pl-v">this</span>.<span class="pl-c1">size</span>[<span class="pl-c1">1</span>]);
+};
+
+<span class="pl-c">// Definiáljuk az animáló függvényt, ami most véletlenszerû mozgatás</span>
+<span class="pl-c">// (2)</span>
+<span class="pl-c1">square</span>.<span class="pl-en">animate</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">time</span>){
+    <span class="pl-c">// Véletlenszerû mozgás egy kicsit a +x +y irányba tolva</span>
+    <span class="pl-v">this</span>.position[<span class="pl-c1">0</span>] <span class="pl-k">+=</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">-</span><span class="pl-c1">0.4</span>; 
+    <span class="pl-v">this</span>.position[<span class="pl-c1">1</span>] <span class="pl-k">+=</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">-</span><span class="pl-c1">0.4</span>;
+};
+
+<span class="pl-c">// ...</span>
+<span class="pl-c">// Tegyük a négyzetet az animálhatók tömbjébe is, hogy a ciklus õt se hagyja ki.</span>
+world.animatables.<span class="pl-c1">push</span>(square);</pre></div>
+
+<p>Nézzük, hogyan változik a fõciklusunk, ha már animálnia is kell a világban élõ egyedeket.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> <span class="pl-en">gameLoop</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(){
+    <span class="pl-c1">window</span>.requestAnimationFrame(gameLoop);
+    clearCtx();
+
+    <span class="pl-c">// (3)</span>
+    <span class="pl-k">for</span>(<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>;i<span class="pl-k">&lt;</span>world.animatables.<span class="pl-c1">length</span>;i<span class="pl-k">++</span>){
+        <span class="pl-k">var</span> animatable <span class="pl-k">=</span> world.animatables[i];
+        animatable.animate(); <span class="pl-c">// bár most még nem adunk át idõt, mert nem fontos</span>
+    }
+
+    <span class="pl-k">for</span>(<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>;i<span class="pl-k">&lt;</span>world.drawables.<span class="pl-c1">length</span>;i<span class="pl-k">++</span>){
+        <span class="pl-k">var</span> drawable <span class="pl-k">=</span> world.drawables[i];
+        drawable.drawTo(ctx);
+    }
+};
+</pre></div>
+
+<p>Ha ezek után elindítjuk az <em>index.html</em>-ünket, láthatjuk, hogy az animáció sikeres, hiszen képkockánként megmozdul valamilyen irányba egy kicsit a négyzet. Tehát megtörténik az animáció, a törlés és az újrarajzolás.</p>
+
+<p><em>Megjegyzés:</em> Azt, hogy az animálhatók tömbjébe (<em>animatables</em>) csak olyanok kerüljenek, akiken van <em>animate</em> függvény, a mi felelõsségünk betartani. A javascript nem statikusan típusos nyelv, tehát megengedi nekünk, hogy olyan objektumokkal tegyük tele, amelyeken nincs semmiféle függvény, és így persze a kódunk hibát is okozhatna. Ezért figyeljünk, hogy ne helyezzünk olyan objektumokat ebbe a tömbbe, amelyeken nincs <em>animate</em> függvény. (hasonlóképp a <em>drawables</em> tömbben is csak olyasvalakik legyenek, akiknek van <em>drawTo</em> függvényük).</p>
+
+<p>A következõ lépésben több példánnyal fogunk dolgozni, és ezekhez osztályokat is gyártunk.</p>
+
+<h2>
+<a id="user-content-5-vektor-és-négyzet-osztályok-példányosítás" class="anchor" href="#5-vektor-%C3%A9s-n%C3%A9gyzet-oszt%C3%A1lyok-p%C3%A9ld%C3%A1nyos%C3%ADt%C3%A1s" aria-hidden="true"><span class="octicon octicon-link"></span></a>5. Vektor és négyzet osztályok, példányosítás</h2>
+
+<p>Ha az elõzõekben megjelenített, és animált négyzeteinkbõl többet szeretnénk létrehozni, akkor csinálhatjuk azt, hogy a felépített objektumot egyszerûen egy ciklusban gyártjuk, és így sok hasonló objektumot tudunk elkészíteni, de egy kézenfekvõbb, és elfogadottabb megközelítés, ha készítünk egy "osztályt" erre. Az objektumorientált programozási nyelvekbõl ismert osztályoknak a javascriptben igazából nincs megfelelõje, hiszen a javascript nem osztályokat, hanem objektumokat, és nem leszármaztatásos öröklést, hanem prototípusokat használ. Ezen fogalmak kifejtése kicsit hosszas munka lenne, de aki valóban szeretne foglalkozni a nyelvvel, érdemes utánanéznie. </p>
+
+<p>Mi a következõkben úgy fogjuk szimulálni az OO nyelvek osztályait, hogy használatuk hasonló legyen. Erre a szimulációra a javascript némi támogatást is ad, névlegesen: ha egy függvényt úgy használunk mint osztályt, akkor az a függvény lehet az osztályunk konstruktora. A konstruktor pedig, mint tudjuk arra való, hogy példányokat gyártsunk egy osztályhoz. Az osztály szintû közös viselkedést pedig a konstruktorfüggvény prototípusán implementált függvényekkel fogjuk tudni megoldani, ugyanis, ha egy függvény prototípusán megjelenik egy érték (legyen az szám, szöveg, vagy éppen függvény), akkor az az összes példányon elérhetõ. Ha még nem érted, akkor próbáld a kód alapján megérteni.</p>
+
+<p>Például elkezdhetünk implementálni egy Vektor osztályt a nulláról, ami például alap Vektor mûveleteket fog tudni megoldani. Mire jó ez? A játékok általában 2D vagy 3D vektorokkal operálnak, hogy a pozíciókat, sebességeket, és egyéb vektormennyiségeket karban tudjanak tartani. Ráadásul könnyû is! Az összes mûvelet pontosan úgy mûködik, ahogy azt középiskolában megtanultuk.</p>
+
+<p>A következõ kódrészletet egy új <em>Vector.js</em> fájlba helyeztem, amit az <em>index.html</em>-ben behivatkoztam, mint a <em>gameScript.js</em>-t.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Konstruktor függvény definiálásával kezdjük</span>
+<span class="pl-k">var</span> <span class="pl-en">Vector</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">x</span>,<span class="pl-smi">y</span>){
+    <span class="pl-v">this</span>.<span class="pl-c1">x</span> <span class="pl-k">=</span> x <span class="pl-k">||</span> <span class="pl-c1">0</span>;
+    <span class="pl-v">this</span>.<span class="pl-c1">y</span> <span class="pl-k">=</span> y <span class="pl-k">||</span> <span class="pl-c1">0</span>;
+};
+
+<span class="pl-c">// Vektormûveletek definiálása a prototípuson</span>
+
+<span class="pl-c">// Pl. a vektor eltolása</span>
+<span class="pl-c1">Vector</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">addInPlace</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">other</span>){
+    <span class="pl-v">this</span>.<span class="pl-c1">x</span> <span class="pl-k">+=</span> other.<span class="pl-c1">x</span>;
+    <span class="pl-v">this</span>.<span class="pl-c1">y</span> <span class="pl-k">+=</span> other.<span class="pl-c1">y</span>;
+    <span class="pl-k">return</span> <span class="pl-v">this</span>;
+};
+
+<span class="pl-c">// Pl a hossz kiszámítása Pitagorasz-tétellel</span>
+<span class="pl-c1">Vector</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">length</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(){
+    <span class="pl-k">return</span> <span class="pl-c1">Math</span>.<span class="pl-c1">sqrt</span>(<span class="pl-v">this</span>.<span class="pl-c1">x</span><span class="pl-k">*</span><span class="pl-v">this</span>.<span class="pl-c1">x</span> <span class="pl-k">+</span> <span class="pl-v">this</span>.<span class="pl-c1">y</span><span class="pl-k">*</span><span class="pl-v">this</span>.<span class="pl-c1">y</span>);
+};
+
+<span class="pl-c">// pl véletlenszerû vektor generálása</span>
+<span class="pl-c1">Vector</span>.<span class="pl-en">random</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">scaleX</span>, <span class="pl-smi">scaleY</span>){
+    <span class="pl-k">if</span> (arguments.<span class="pl-c1">length</span> <span class="pl-k">==</span> <span class="pl-c1">0</span>){
+        scaleX <span class="pl-k">=</span> scaleY <span class="pl-k">=</span> <span class="pl-c1">1</span>;
+    } <span class="pl-k">else</span> <span class="pl-k">if</span> (arguments.<span class="pl-c1">length</span> <span class="pl-k">==</span> <span class="pl-c1">1</span>){
+        scaleY <span class="pl-k">=</span> scaleX;
+    }
+
+    <span class="pl-k">return</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>((<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">-</span><span class="pl-c1">0.5</span>)<span class="pl-k">*</span>scaleX,(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">-</span><span class="pl-c1">0.5</span>)<span class="pl-k">*</span>scaleY);
+};</pre></div>
+
+<p>Ezt a vektor osztályt késõbb még kiterjesztjük, de ennyi egyelõre elég ahhoz, hogy megoldjuk a játékunk jelenlegi szükségleteit.</p>
+
+<p>Kényelmi okokból egészítsük ki a világ objektumunkat egy aprósággal. Azzal, hogy egy függvénnyel egyszerre az összes tároló tömbhöz hozzá tudjuk adni a rajzolandó és animálandó példányokat, készítsünk egy egyszerû insert függvényt.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> world <span class="pl-k">=</span> {
+    <span class="pl-c">// Csináljunk egy függvényt ami egyszerre több helyre is beszúrja az elemet</span>
+    <span class="pl-en">insert</span> : <span class="pl-k">function</span>(<span class="pl-smi">entity</span>, <span class="pl-smi">asDrawable</span>, <span class="pl-smi">asAnimatable</span>){
+        world.<span class="pl-c1">entities</span>.<span class="pl-c1">push</span>(entity);
+        <span class="pl-k">if</span> (asDrawable) world.drawables.<span class="pl-c1">push</span>(entity);
+        <span class="pl-k">if</span> (asAnimatable) world.animatables.<span class="pl-c1">push</span>(entity);
+    },
+    entities<span class="pl-k">:</span> [],
+    drawables<span class="pl-k">:</span> [],
+    animatables<span class="pl-k">:</span> []
+};</pre></div>
+
+<p>Végül készítsük el az eddigi 1 darab négyzetünk mintájára az osztályt, ami sok hasonló négyzetet tud majd paraméterezetten generálni. Ehhez is a függvény-osztály szintaxist használjuk mint az elõbbiekben. Ezt a kódrészletet ott készítettem el, ahol eddig az 1 db négyzetet gyártottuk le:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Javascriptben a függvény akár konstruktor függvényként is szolgálhat objektumok gyártására</span>
+<span class="pl-k">var</span> <span class="pl-en">Square</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">x</span>,<span class="pl-smi">y</span>,<span class="pl-smi">size</span>, <span class="pl-smi">color</span>){
+    <span class="pl-v">this</span>.position <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(x,y);
+    <span class="pl-v">this</span>.<span class="pl-c1">size</span> <span class="pl-k">=</span> size;
+    <span class="pl-v">this</span>.<span class="pl-c1">color</span> <span class="pl-k">=</span> color <span class="pl-k">||</span>  <span class="pl-s"><span class="pl-pds">"</span>#eb01aa<span class="pl-pds">"</span></span>;
+};
+
+<span class="pl-c">// Ugyanazokat a függvényeket, amiket eddig 1 darab négyzet objektumra tettünk rá, most a prototípust képzõ objektumra tehetjük. </span>
+<span class="pl-c">// Ennek hatására az összes példányon megjelenik</span>
+<span class="pl-c1">Square</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">drawTo</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">context</span>){
+    context.fillStyle <span class="pl-k">=</span> <span class="pl-v">this</span>.<span class="pl-c1">color</span>;
+    context.fillRect(<span class="pl-v">this</span>.position.<span class="pl-c1">x</span>,<span class="pl-v">this</span>.position.<span class="pl-c1">y</span>,<span class="pl-v">this</span>.<span class="pl-c1">size</span>, <span class="pl-v">this</span>.<span class="pl-c1">size</span>);
+};
+<span class="pl-c1">Square</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">animate</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">time</span>){
+    <span class="pl-v">this</span>.position.addInPlace(Vector.<span class="pl-c1">random</span>());
+};
+</pre></div>
+
+<p>Miután készen áll az új Square (négyzet) osztályunk, példányosíthatunk belõle kettõt, vagy sokat is, amelyek hasonlóan fognak viselkedni, mint az elõzõ 1 darab.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Most már példányosíthatjuk bármilyen paraméterekkel több példányként is a négyzetünk</span>
+<span class="pl-k">var</span> square <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Square</span>(<span class="pl-c1">100</span>,<span class="pl-c1">100</span>,<span class="pl-c1">30</span>);
+<span class="pl-k">var</span> square2 <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Square</span>(<span class="pl-c1">150</span>,<span class="pl-c1">150</span>, <span class="pl-c1">20</span>, <span class="pl-s"><span class="pl-pds">"</span>#40ef30<span class="pl-pds">"</span></span>);
+
+<span class="pl-c">// használjuk a world új függvényét:</span>
+world.insert(square,<span class="pl-c1">true</span>,<span class="pl-c1">true</span>);
+world.insert(square2,<span class="pl-c1">true</span>,<span class="pl-c1">true</span>);
+
+<span class="pl-c">// Akár sok objektumot is beszúrhatunk véletlenszerûen:</span>
+<span class="pl-k">for</span>(<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>; i<span class="pl-k">&lt;</span><span class="pl-c1">50</span>; i<span class="pl-k">++</span>){
+    <span class="pl-k">var</span> sq <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Square</span>(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span>cWidth,<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span>cHeight, 
+            <span class="pl-c1">15</span>, <span class="pl-s"><span class="pl-pds">"</span>#9999<span class="pl-pds">"</span></span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">floor</span>(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span><span class="pl-c1">10</span>) <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">floor</span>(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span><span class="pl-c1">10</span>));
+    world.insert(sq,<span class="pl-c1">true</span>, <span class="pl-c1">true</span>);
+}</pre></div>
+
+<p>Ez utóbbi szintaxis már kezd eléggé hasonlítani a C#-ban megszokottakhoz. A nagybetûs függvényeket (Vector, Square) úgy használhatjuk, mintha osztályokat jelképeznének, és a <em>new</em> kulcsszóval példányosíthatjuk õket.</p>
+
+<p>Ha ezután elindítjuk a játékot, látjuk, hogy sok négyzet példány megjelent a képen, és izegnek-mozognak. Ezzel megtanultuk az osztályok és a példányosítás alapjait. Ezt akkor érdemes használni, tehát, ha sok hasoló viselkedésû objektumot szeretnénk csinálni a játékban (pl.: pénzérmék, ellenségek, lövedékek). A következõ lépés? Valahogy próbáljunk interaktivitást vinni a demónkba.</p>
+
+<h2>
+<a id="user-content-6-inputkezelés" class="anchor" href="#6-inputkezel%C3%A9s" aria-hidden="true"><span class="octicon octicon-link"></span></a>6. Inputkezelés</h2>
+
+<p>Ebben a fejezetben minimális inputkezelést fogunk megvalósítani olyan formában, hogy a kis négyzetek az egér pozíciója felé mozognak.
+Elsõ lépésként mozgassuk át a négyzetünket definiáló kódrészleteket egy külön fájlba, hogy ne piszkítsuk vele a <em>gameScript.js</em> fájljainkat.</p>
+
+<p>Egyúttal ki is egészíthetjük a négyzetünket két új tulajdonsággal, azzal hogy mi a sebessége, és azzal, hogy mi a gyorsulása. Középiskolás fizikával pedig ki tudjuk számolni ezek közt az összefüggést: a sebesség minden körben nõ az idõ és a gyorsulás szorzatával, a pozíció pedig minden körben változik a sebesség és az idõ szorzatával. (?v = t<em>a, és ?x = t</em>v)
+Tehát készítsünk, és hivatkozzunk be egy Square.js fájlt a következõ tartalommal:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> <span class="pl-en">Square</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">x</span>,<span class="pl-smi">y</span>,<span class="pl-smi">size</span>, <span class="pl-smi">color</span>){
+    <span class="pl-v">this</span>.position <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(x,y);
+    <span class="pl-v">this</span>.<span class="pl-c1">size</span> <span class="pl-k">=</span> size;
+    <span class="pl-v">this</span>.<span class="pl-c1">color</span> <span class="pl-k">=</span> color <span class="pl-k">||</span>  <span class="pl-s"><span class="pl-pds">"</span>#eb01aa<span class="pl-pds">"</span></span>;
+
+    <span class="pl-v">this</span>.speed <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>();
+    <span class="pl-v">this</span>.acceleration <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>();
+};
+
+<span class="pl-c1">Square</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">drawTo</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">context</span>){
+    context.fillStyle <span class="pl-k">=</span> <span class="pl-v">this</span>.<span class="pl-c1">color</span>;
+    context.fillRect(<span class="pl-v">this</span>.position.<span class="pl-c1">x</span>,<span class="pl-v">this</span>.position.<span class="pl-c1">y</span>,<span class="pl-v">this</span>.<span class="pl-c1">size</span>, <span class="pl-v">this</span>.<span class="pl-c1">size</span>);
+};
+
+<span class="pl-c1">Square</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">animate</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">time</span>){
+    <span class="pl-c">// Paraméterül kapja, hogy mennyi a ?t</span>
+    <span class="pl-c">// (?v = ?t*a, és ?x = ?t*v)</span>
+    <span class="pl-v">this</span>.speed.addInPlace(<span class="pl-v">this</span>.acceleration.scale(time/<span class="pl-c1">1000</span>));
+    <span class="pl-v">this</span>.position.addInPlace(<span class="pl-v">this</span>.speed.scale(time/<span class="pl-c1">1000</span>));
+};</pre></div>
+
+<p>Ezt letudtuk. A megtisztított <em>gameScript.js</em>-ünket 4 helyen egészítjük ki kóddal:</p>
+
+<ol>
+<li>Csak a generált négyzeteket hagyjuk benne</li>
+<li>A szimulációhoz minden körben kiszámítjuk az eltelt idõt, és ezt átadjuk az animate függvényeknek, hogy a testek idõarányosan mozogjanak</li>
+<li>Elkészítünk egy az egér és billentyûzet modellezésére alkalmas objektumot, amit eseménykezelõbõl frissítünk.</li>
+<li>A világ objektumunkon elkészítünk egy függvényt, ami valahogy kezeli az elõzõ pont beli egér-modell állapotát.</li>
+</ol>
+
+<p>(1). Most nincs szükség a külön generált példányokra, megtarthatjuk csak azt az 50 véletlenszerût, akit a Square osztályból generálunk.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> colors <span class="pl-k">=</span> [<span class="pl-s"><span class="pl-pds">"</span>#a171ca<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>#0a46c1<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>#99ea49<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>#abac0a<span class="pl-pds">"</span></span>];
+<span class="pl-k">var</span> squares <span class="pl-k">=</span> [];
+<span class="pl-k">for</span>(<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>; i<span class="pl-k">&lt;</span><span class="pl-c1">50</span>; i<span class="pl-k">++</span>){
+    <span class="pl-c">// Új négyzet készítése</span>
+    <span class="pl-k">var</span> sq <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Square</span>(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span>cWidth,<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span>cHeight, <span class="pl-c1">15</span>, colors[i<span class="pl-k">%</span><span class="pl-c1">4</span>]);
+    <span class="pl-c">// Amit beszúrunk a világunkba</span>
+    world.insert(sq,<span class="pl-c1">true</span>, <span class="pl-c1">true</span>);
+    <span class="pl-c">// És lementjük egy külön tömbbe, majd ezt fogja elérni az input kezelõ függvény.</span>
+    squares[i] <span class="pl-k">=</span> sq;
+}</pre></div>
+
+<p>(2). Ahhoz, hogy az eltelt idõvel tudjuk arányosítani a mozgásokat, ki kell számolnunk, hogy mennyi idõ telt el a legutóbbi képkocka óta. Ha stabilan, és fixen mindig 60FPS-sel menne a játék (60 képkocka másodpercenként) akkor 1000/60=16.6ms jutna minden egyes képkockára, és nem kellene számítgatnunk. De ez a szám változik a gép aktuális terheltségének függvényében, ezért ki kell számítanunk minden render-ciklusban. Ezt a következõképp tehetjük meg:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Ebben tároljuk, hogy mennyi volt a legutóbbi értéke a t-nek</span>
+<span class="pl-k">var</span> lastT <span class="pl-k">=</span> <span class="pl-c1">0</span>;
+
+<span class="pl-k">var</span> <span class="pl-en">gameLoop</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">t</span>){
+    <span class="pl-c">// A gameLoop függvényünk paraméterét a requestAnimationFrame fogja adni. Ez a t mindig azt az idõt mutatja, hogy mennyi ideje megy már a játék. Amit tennünk kell, hogy tároljuk a legutóbbi t értékeket, és kivonjuk az aktuálisból. Így megkapjuk a deltát.</span>
+    <span class="pl-k">if</span> (lastT <span class="pl-k">==</span> <span class="pl-c1">0</span>){
+        <span class="pl-c">// Ha eddig még nem volt soha, akkor hazudjuk, hogy a legelsõ képkocka 16ms volt.</span>
+        <span class="pl-k">var</span> delta<span class="pl-k">=</span><span class="pl-c1">60</span>/<span class="pl-c1">1000</span>;
+        lastT <span class="pl-k">=</span> t;
+    } <span class="pl-k">else</span> {
+        <span class="pl-c">// Különben számítsuk ki a két t különbözetét</span>
+        delta <span class="pl-k">=</span> t <span class="pl-k">-</span> lastT;
+        <span class="pl-c">// És tároljuk le a legutóbbi t-t</span>
+        lastT <span class="pl-k">=</span> t;
+    }
+
+    <span class="pl-c1">window</span>.requestAnimationFrame(gameLoop);
+
+    clearCtx();
+
+    <span class="pl-c">/** itt hívjuk meg a majd 4. részben elkészülõ függvényt **/</span>
+    world.handleInputs(mouse,keyboard);    
+
+    <span class="pl-k">for</span>(<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>;i<span class="pl-k">&lt;</span>world.animatables.<span class="pl-c1">length</span>;i<span class="pl-k">++</span>){
+        <span class="pl-k">var</span> animatable <span class="pl-k">=</span> world.animatables[i];
+        <span class="pl-c">// Itt használjuk fel a kiszámított deltát</span>
+        animatable.animate(delta);
+    }
+
+    <span class="pl-k">for</span>(<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>;i<span class="pl-k">&lt;</span>world.drawables.<span class="pl-c1">length</span>;i<span class="pl-k">++</span>){
+        <span class="pl-k">var</span> drawable <span class="pl-k">=</span> world.drawables[i];
+        drawable.drawTo(ctx);
+    }
+
+}</pre></div>
+
+<p>(3). Egy virtuális egér objektumban tároljuk és frissítjük, hogy hol volt legutóbb az egér pozíciója, és hogy nyomták-e a gombot. Ez sokkal egyszerûbb mint aminek hangzik. Egy egyszerû javascript objektum kell hozzá, és egy eseménykezelõ, ami frissítgeti az egér értékét.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">/** Feliratkozunk mindenféle egér eseményekre, aminek állapotát tároljuk egy állapotváltozóban **/</span>
+<span class="pl-k">var</span> mouse <span class="pl-k">=</span> {
+    x<span class="pl-k">:</span><span class="pl-c1">0</span>,
+    y<span class="pl-k">:</span><span class="pl-c1">0</span>,
+    left<span class="pl-k">:</span><span class="pl-c1">false</span>,
+    right<span class="pl-k">:</span><span class="pl-c1">false</span>
+};
+<span class="pl-c">// A vászonra tehetünk egy eseménykezelõt, ami minden mozgatá eseménynél frissíti a tárolt egérpozíciót.</span>
+<span class="pl-c1">canvas</span>.<span class="pl-en">onmousemove</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">ev</span>){
+    <span class="pl-c">// Azért hogy Chrome-on és Firefoxon is megbízhatóan mûködjön, így kell megoldani:</span>
+    <span class="pl-k">var</span> rect <span class="pl-k">=</span> canvas.getBoundingClientRect();
+    mouse.<span class="pl-c1">x</span> <span class="pl-k">=</span> ev.offsetX <span class="pl-k">||</span> ev.clientX <span class="pl-k">-</span> rect.<span class="pl-c1">left</span>;
+    mouse.<span class="pl-c1">y</span> <span class="pl-k">=</span> ev.offsetY <span class="pl-k">||</span> ev.clientY <span class="pl-k">-</span> rect.<span class="pl-c1">top</span>;
+};
+
+<span class="pl-c">/** Megelõlegezhetjük ezt a billentyûzetre is **/</span>
+<span class="pl-k">var</span> keyboard <span class="pl-k">=</span> {};
+</pre></div>
+
+<p>(4). Végül kell egy függvény, akit már a 2. lépésben meghívtunk. Õ az aki minden ciklusban ránéz az egér állapotára, és az alapján eldönti, hogy mit kell változtatni a világon. A mi esetünkben nem történik semmi bonyolult, csak az egér pozíciója felé fogjuk mozgatni a négyzeteket.</p>
+
+<div class="highlight highlight-javascript"><pre>    <span class="pl-c">// Ez a függvény kerül a világ objetumunkra</span>
+
+    <span class="pl-k">var</span> world <span class="pl-k">=</span> {
+    <span class="pl-c">//...</span>
+    <span class="pl-en">handleInputs</span> : <span class="pl-k">function</span>(<span class="pl-smi">mouse</span>,<span class="pl-smi">keyboard</span>){
+        <span class="pl-c">// Elõször vegyük az egérpozíció helyvektorát</span>
+        <span class="pl-k">var</span> mousePos <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(mouse.<span class="pl-c1">x</span>,mouse.<span class="pl-c1">y</span>);
+
+        <span class="pl-c">// Iteráljunk végig az összes elemen</span>
+        <span class="pl-k">for</span>(<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>; i<span class="pl-k">&lt;</span> world.<span class="pl-c1">entities</span>.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>){
+            <span class="pl-c">// Vegyük ki az aktuális elemet</span>
+            <span class="pl-k">var</span> entity <span class="pl-k">=</span> world.<span class="pl-c1">entities</span>[i];
+            <span class="pl-c">// S ha ez az elem bizony egy négyzet</span>
+            <span class="pl-k">if</span> (entity <span class="pl-k">instanceof</span> Square){
+                <span class="pl-c">// Akkor annak sebessége legyen a pozíciójából az egér helyvektorához húzott vektor</span>
+                <span class="pl-c">// Ezt vektoralgebrában egyszerû kivonással megoldhatjuk</span>
+                entity.speed <span class="pl-k">=</span> mousePos.subtract(entity.position);
+            }
+        }
+       }
+    };</pre></div>
+
+<p>Elõbbiekhez még két kiegészítést tehetünk a Vector osztályunkban, hogy létezzen <em>.subtract</em> függvényünk, és <em>.scale</em> függvényünk. Ezek, nem úgy mint az <em>.addToSelf</em>, nem módosítják a vektort akin hívjuk, hanem új vektorokat gyártanak le. Elsõ a különbségvektort állítja elõ, a második pedig a megnyújtott másolatát. Így néznek ki:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// A Vector.js fájlban, csatoljuk az új függvényeket a prototípusra, így minden Vector példányon meg fog jelenni.</span>
+<span class="pl-c1">Vector</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">subtract</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">other</span>){
+    <span class="pl-k">return</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(<span class="pl-v">this</span>.<span class="pl-c1">x</span> <span class="pl-k">-</span> other.<span class="pl-c1">x</span>, <span class="pl-v">this</span>.<span class="pl-c1">y</span> <span class="pl-k">-</span> other.<span class="pl-c1">y</span>);
+};
+
+<span class="pl-c1">Vector</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">scale</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">scaler</span>){
+    <span class="pl-k">return</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(<span class="pl-v">this</span>.<span class="pl-c1">x</span> <span class="pl-k">*</span> scaler, <span class="pl-v">this</span>.<span class="pl-c1">y</span> <span class="pl-k">*</span> scaler);
+};
+</pre></div>
+
+<p>Ha mindennel végeztünk, fújjuk ki magunkat, és gondoljuk át, mi is amit megvalósítottunk: egy virtuális egér objektumban tároljuk az egér legutóbbi ismert helyét, és a világ szimulációja során, minden egyes képkocka kirajzolása elõtt az egér pozíciója felé gyorsítjuk a négyzeteinket.</p>
+
+<p>Ha már értjük mit csináltunk, próbáljuk ki, hogy valóban az történik-e amit vártunk.</p>
+
+<h2>
+<a id="user-content-7-pszeudo-fizikai-megközelítés" class="anchor" href="#7-pszeudo-fizikai-megk%C3%B6zel%C3%ADt%C3%A9s" aria-hidden="true"><span class="octicon octicon-link"></span></a>7. Pszeudo-fizikai megközelítés</h2>
+
+<p>Azért írtam pszeudo-fizikait, mert jól hangzik, na meg persze azért is, mert nem lesz valódi fizikai szimuláció a játékban. Kicsit távolról próbálunk pár dolgot közelíteni, amit ismerünk a középiskolai fizikából. Elsõ lépésként a gyorsulás-sebesség-pozíció hármast próbáljuk jobban közelíteni, amit már az elõzõ részben is megemlítettünk.</p>
+
+<p>A dolog, amit csinálunk most, az, hogy lecseréljük az egyszerû sebesség alapú mozgatást a négyzeteinkben egy gyorsulás és súrlódás alapúra. Ezzel kicsit jobban kinézõ animációkat tudunk készíteni, és így tudjuk figyelembe venni a gravitációt is késõbb.</p>
+
+<p>Ehhez a Square.js-ben a Square osztályunk <em>animate</em> függvényét szabjuk át így:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c1">Square</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">animate</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">time</span>){
+    <span class="pl-c">// A gyorsulásból számítjuk a sebességet</span>
+    <span class="pl-v">this</span>.speed.addInPlace(<span class="pl-v">this</span>.acceleration.scale(time/<span class="pl-c1">1000</span>));
+
+    <span class="pl-c">// Csökkentjük a sebességet a súrlódással, és limitáljuk azt két határ közé</span>
+    <span class="pl-v">this</span>.speed.clamp(<span class="pl-v">this</span>.minSpeed, <span class="pl-v">this</span>.maxSpeed);
+    <span class="pl-v">this</span>.speed.scaleInPlace(<span class="pl-c1">1</span><span class="pl-k">-</span><span class="pl-v">this</span>.friction);
+
+    <span class="pl-v">this</span>.position.addInPlace(<span class="pl-v">this</span>.speed.scale(time/<span class="pl-c1">1000</span>));
+};
+</pre></div>
+
+<p>Amint látható, az elõbb meghivatkoztunk 4 tulajdonságot ami nem volt eddig jellemzõ a négyzetünkre: gyorsulás, súrlódás, minimum és maximum sebesség. Felvehetnénk ezt egyszerûen új paraméterekként a Square konstruktorban, de annak az lenne a vége, hogy végtelen paraméter felé közelítenénk. Ehelyett használjuk a Javascriptben elterjedt paraméterobjektumos inicializálást, amely lényege, hogy a másodlagos tulajdonságokat egy objektumba tömörítve adjuk át a konstruktornak, aki ebbõl veszi ki az egyes értékeket.</p>
+
+<p>Ehhez a Square konstruktora a következõképp alakul át:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Az egyre gyarapodó paraméterlista helyett options argumentum objektum</span>
+<span class="pl-k">var</span> <span class="pl-en">Square</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">x</span>,<span class="pl-smi">y</span>, <span class="pl-smi">options</span>){
+    <span class="pl-c">// Ha nem volt options megadva, akkor legyen az egy üres objektum</span>
+    options <span class="pl-k">=</span> options <span class="pl-k">||</span> {};
+
+    <span class="pl-v">this</span>.position <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(x,y);
+
+    <span class="pl-c">// Használjuk a || (vagy) operátort az alapértelmezett értékekhez</span>
+    <span class="pl-v">this</span>.<span class="pl-c1">size</span> <span class="pl-k">=</span> options.<span class="pl-c1">size</span> <span class="pl-k">||</span> <span class="pl-c1">5</span>;
+    <span class="pl-v">this</span>.<span class="pl-c1">color</span> <span class="pl-k">=</span> options.<span class="pl-c1">color</span> <span class="pl-k">||</span>  <span class="pl-s"><span class="pl-pds">"</span>#eb01aa<span class="pl-pds">"</span></span>;
+    <span class="pl-v">this</span>.speed  <span class="pl-k">=</span> options.speed <span class="pl-k">||</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>();
+    <span class="pl-v">this</span>.acceleration <span class="pl-k">=</span> options.acceleration <span class="pl-k">||</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>();
+
+    <span class="pl-c">// A valószerûbb viselkedéshez csökkenteni, és korlátozni kell a részecskék sebességét</span>
+    <span class="pl-v">this</span>.friction <span class="pl-k">=</span> options.friction <span class="pl-k">||</span> <span class="pl-c1">0.1</span>;
+    <span class="pl-v">this</span>.maxSpeed <span class="pl-k">=</span> options.minSpeed <span class="pl-k">||</span> Square.SPD_MAX;
+    <span class="pl-v">this</span>.minSpeed <span class="pl-k">=</span> options.maxSpeed <span class="pl-k">||</span> Square.SPD_MIN;
+};
+
+<span class="pl-c">// Csinálhatunk osztály szinten is konstansokat, amiben az alapértelmezett értékeket tárolhatjuk.</span>
+Square.SPD_MIN <span class="pl-k">=</span> <span class="pl-k">-</span><span class="pl-c1">150</span>;
+Square.SPD_MAX <span class="pl-k">=</span> <span class="pl-c1">150</span>;</pre></div>
+
+<p>Továbbá használtunk egy <em>.clamp</em> függvényt, ami a vektor értékeit korlátozza minimum és maximum értékek közé. Ezt pótlólagosan felvisszük a Vector osztály függvényei közé, a Vector.js fájlban:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Korlátozó függvény, amivel könnyen, gyorsan limitálhatjuk a sebességet pl.</span>
+<span class="pl-c1">Vector</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">clamp</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">min</span>, <span class="pl-smi">max</span>) {
+    <span class="pl-k">if</span> (min <span class="pl-k">&gt;</span> max) <span class="pl-k">throw</span> <span class="pl-k">new</span> <span class="pl-en">Error</span>(<span class="pl-s"><span class="pl-pds">"</span>Inverse ranges<span class="pl-pds">"</span></span>);
+    <span class="pl-c">// X</span>
+    <span class="pl-k">if</span> (<span class="pl-v">this</span>.<span class="pl-c1">x</span> <span class="pl-k">&gt;</span> max) {
+        <span class="pl-v">this</span>.<span class="pl-c1">x</span> <span class="pl-k">=</span> max;
+    }
+    <span class="pl-k">else</span> <span class="pl-k">if</span> (<span class="pl-v">this</span>.<span class="pl-c1">x</span> <span class="pl-k">&lt;</span> min) {
+        <span class="pl-v">this</span>.<span class="pl-c1">x</span> <span class="pl-k">=</span> min;
+    }
+    <span class="pl-c">// Y</span>
+    <span class="pl-k">if</span> (<span class="pl-v">this</span>.<span class="pl-c1">y</span> <span class="pl-k">&gt;</span> max) {
+        <span class="pl-v">this</span>.<span class="pl-c1">y</span> <span class="pl-k">=</span> max;
+    }
+    <span class="pl-k">else</span> <span class="pl-k">if</span> (<span class="pl-v">this</span>.<span class="pl-c1">y</span> <span class="pl-k">&lt;</span> min) {
+        <span class="pl-v">this</span>.<span class="pl-c1">y</span> <span class="pl-k">=</span> min;
+    }
+};
+</pre></div>
+
+<p>Mivel a négyzetek már új féle tulajdonságokat is várnak konstruálás során, így adjuk meg a <em>gameScript.js</em> megfelelõ részében ezeket a paraméter objektum használatával:</p>
+
+<div class="highlight highlight-javascript"><pre>    <span class="pl-c">// Ahol eddig generáltuk a négyzeteket, most így:</span>
+<span class="pl-k">var</span> colors <span class="pl-k">=</span> [<span class="pl-s"><span class="pl-pds">"</span>#a171ca<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>#0a46c1<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>#99ea49<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>#abac0a<span class="pl-pds">"</span></span>];
+<span class="pl-k">var</span> squares <span class="pl-k">=</span> [];
+<span class="pl-k">for</span>(<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>; i<span class="pl-k">&lt;</span><span class="pl-c1">50</span>; i<span class="pl-k">++</span>){
+    <span class="pl-k">var</span> sq <span class="pl-k">=</span> squares[i] <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Square</span>(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span>cWidth,<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span>cHeight, {
+        size<span class="pl-k">:</span><span class="pl-c1">15</span>,
+        color<span class="pl-k">:</span>colors[i<span class="pl-k">%</span><span class="pl-c1">4</span>],
+        friction<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span><span class="pl-c1">0.01</span>
+    });
+    world.insert(sq,<span class="pl-c1">true</span>, <span class="pl-c1">true</span>);
+}
+</pre></div>
+
+<p>Miután a négyzeteink felkészültek arra, hogy gyorsulással vezéreljük õket, már csak a fõ input kezelõ logikát kell úgy módosítani, hogy ne a négyzetek sebességét, hanem gyorsulásukat állítsa az egér kurzor felé mutató irányba:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// gameScript.js handleInputs függvényében a megfelelõ helyen:</span>
+
+    <span class="pl-k">if</span> (entity <span class="pl-k">instanceof</span> Square){
+        <span class="pl-c">// Ehelyett:</span>
+        <span class="pl-c">//entity.speed = mousePos.subtract(entity.position);</span>
+        entity.acceleration <span class="pl-k">=</span> mousePos.subtract(entity.position);
+    }</pre></div>
+
+<p>Ha semmit nem felejtettünk el, akkor az elõzõhöz hasonlóképp mûködik a kis demónk, a négyzetek itt is az egeret követik, de mozgásuk láthatóan rugalmasabb, dinamikusabb.</p>
+
+<h2>
+<a id="user-content-8-pszeudo-fizika-gravitáció" class="anchor" href="#8-pszeudo-fizika-gravit%C3%A1ci%C3%B3" aria-hidden="true"><span class="octicon octicon-link"></span></a>8. Pszeudo-fizika, gravitáció</h2>
+
+<p>Az új és szép dinamikus világunkban van még egy triviális dolog ami segíthet a játékunk összhatásán: gravitáció!
+Majdnem minden játékban elõfordul, és néhány játék szinte csak erre alapoz. Az emberek életük során már elég jól elõre tudják becsülni a dolgok röppályáját, ami annak köszönhetõ, hogy már megszoktuk és természetesnek tartjuk a gravitációt. Tehát ha a játékunk nem használ gravitációs jellegû erõt, akkor az természetellenes hatással fog járni.</p>
+
+<p>Erre a változtatásokat a <em>gameScript.js</em>-ben és a <em>Square.js</em>-ben is kell tennünk:
+1., Átírjuk az inputkezelést, hogy csak akkor vonzza a négyzeteket, ha mi akarjuk.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Alakítsuk át a handleInputs függvényünk a következõképp</span>
+<span class="pl-c">// ...</span>
+<span class="pl-en">handleInputs</span>: <span class="pl-k">function</span>(<span class="pl-smi">mouse</span>, <span class="pl-smi">keyboard</span>) {
+        <span class="pl-k">var</span> mousePos <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(mouse.<span class="pl-c1">x</span>, mouse.<span class="pl-c1">y</span>);
+
+        <span class="pl-c">// Csak akkor ha nyomva van a gomb</span>
+        <span class="pl-k">if</span> (mouse.<span class="pl-c1">left</span>) {
+            <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> world.<span class="pl-c1">entities</span>.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+                <span class="pl-k">var</span> entity <span class="pl-k">=</span> world.<span class="pl-c1">entities</span>[i];
+                <span class="pl-k">if</span> (entity <span class="pl-k">instanceof</span> Square) {
+                <span class="pl-c">// Legyen a gyorsulás az egér felé mutató vektor 3 szorosa</span>
+                    entity.acceleration <span class="pl-k">=</span> mousePos.subtract(entity.position).scale(<span class="pl-c1">3</span>);
+                }
+            }
+        } <span class="pl-k">else</span> {
+            <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> world.<span class="pl-c1">entities</span>.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+                entity <span class="pl-k">=</span> world.<span class="pl-c1">entities</span>[i];
+                <span class="pl-k">if</span> (entity <span class="pl-k">instanceof</span> Square) {
+                    <span class="pl-c">// Különben nullázzuk a kívülrõl érkezõ gyorsulást</span>
+                    entity.acceleration.scaleInPlace(<span class="pl-c1">0</span>);
+                }
+            }
+        }
+    }
+<span class="pl-c">//...</span></pre></div>
+
+<p>2., Ahol eddig az egéreseményeinket gyûjtöttük, állítsuk be a virtuális egér pozícióján túl azt is, hogy nyomva van-e a gomb rajta. Ehhez egy böngészõfüggetlen trükkel a következõt írhatjuk oda ahol eddig csak a pozíciót mentegettük:</p>
+
+<div class="highlight highlight-javascript"><pre>canvas.onmousemove <span class="pl-k">=</span> canvas.onmousedown <span class="pl-k">=</span> <span class="pl-c1">canvas</span>.<span class="pl-en">onmouseup</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">ev</span>) {
+    <span class="pl-k">var</span> rect <span class="pl-k">=</span> canvas.getBoundingClientRect();
+    mouse.<span class="pl-c1">x</span> <span class="pl-k">=</span> ev.offsetX <span class="pl-k">||</span> ev.clientX <span class="pl-k">-</span> rect.<span class="pl-c1">left</span>;
+    mouse.<span class="pl-c1">y</span> <span class="pl-k">=</span> ev.offsetY <span class="pl-k">||</span> ev.clientY <span class="pl-k">-</span> rect.<span class="pl-c1">top</span>;
+    <span class="pl-c">// Próbáljuk kiolvasni hogy nyomva van-e valamelyik gomb</span>
+    mouse.<span class="pl-c1">left</span> <span class="pl-k">=</span> ev.buttons <span class="pl-k">||</span> ev.which;
+};</pre></div>
+
+<p>3., Felcsatolunk egy gravitáció vektor tulajdonságot, mint a világ tulajdonsága. Ez arra lesz jó, hogy ha az entitásoknak, pl egy négyzetnek megadjuk referenciaként az õt tartalmazó világot, akkor meg tudja nézni, hogy ott milyen gravitációs gyorsulásnak kell engedelmeskednie. </p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> world <span class="pl-k">=</span> {
+    gravity<span class="pl-k">:</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(<span class="pl-c1">0</span>, <span class="pl-c1">200</span>),
+    <span class="pl-c">// ...</span>
+};
+
+<span class="pl-c">// Továbbá adjuk paraméterül a világot a négyzetünknek, hogy szükség esetén meg tudja nézni a világ gravitációját</span>
+<span class="pl-c">// Ahol a négyzeteket generáltuk:</span>
+<span class="pl-k">var</span> colors <span class="pl-k">=</span> [<span class="pl-s"><span class="pl-pds">"</span>#a171ca<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>#0a46c1<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>#99ea49<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>#abac0a<span class="pl-pds">"</span></span>];
+<span class="pl-k">var</span> squares <span class="pl-k">=</span> [];
+<span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> <span class="pl-c1">5</span>; i<span class="pl-k">++</span>) {
+    <span class="pl-k">var</span> sq <span class="pl-k">=</span> squares[i] <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Square</span>(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> cWidth, <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> cHeight, {
+        size<span class="pl-k">:</span> <span class="pl-c1">15</span>,
+        color<span class="pl-k">:</span> colors[i <span class="pl-k">%</span> <span class="pl-c1">4</span>],
+        friction<span class="pl-k">:</span> <span class="pl-c1">0.005</span><span class="pl-k">+</span><span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span><span class="pl-c1">0.001</span>,
+        <span class="pl-c">// Már a világot és egy tömeget is átadunk a négyzetnek</span>
+        world<span class="pl-k">:</span> world,
+        mass<span class="pl-k">:</span> <span class="pl-c1">1</span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()
+    });
+    world.insert(sq, <span class="pl-c1">true</span>, <span class="pl-c1">true</span>);
+}
+</pre></div>
+
+<p>4., Egészítsük ki a négyzet osztályunkat, hogy a megkapott tömegnek megfelelõen gyorsítsa magát a világ gravitációjának irányában. (<em>* megjegyzés: innen látszik, hogy pszeudo-fizika, mert a valós világban a testek a tömegüktõl függetlenül egységesen ~9.81m/(s^2)-tel gyorsulnak lefelé, de a játékban ezzel a kis csalással lehet szimulálni leginkább a légellenállást és a zuhanási végsebességet</em>). Szóval a <em>Square.js</em>-ben:</p>
+
+<div class="highlight highlight-javascript"><pre>    <span class="pl-c">// A Square konstruktorában vegyük át a világot és a tömeget:</span>
+<span class="pl-k">var</span> <span class="pl-en">Square</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">x</span>,<span class="pl-smi">y</span>, <span class="pl-smi">options</span>){
+    options <span class="pl-k">=</span> options <span class="pl-k">||</span> {};
+
+    <span class="pl-v">this</span>.world <span class="pl-k">=</span> options.world;
+    <span class="pl-v">this</span>.mass <span class="pl-k">=</span> options.mass <span class="pl-k">||</span> <span class="pl-c1">0</span>;
+
+    <span class="pl-c">// ...</span>
+    <span class="pl-c">// a többi paraméter</span>
+    <span class="pl-c">// ...</span>
+};
+
+<span class="pl-c">// Változtassuk meg az animáló függvényt, úgy hogy kezelje a gravitációt is:</span>
+<span class="pl-c1">Square</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">animate</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">time</span>){
+    <span class="pl-v">this</span>.speed.addInPlace(<span class="pl-v">this</span>.acceleration.scale(time/<span class="pl-c1">1000</span>));
+
+    <span class="pl-c">// Számoljuk bele a gravitációs szabadesés hatását is, tömeggel súlyozva</span>
+    <span class="pl-v">this</span>.speed.addInPlace(<span class="pl-v">this</span>.world.gravity.scale(time/<span class="pl-c1">1000</span> <span class="pl-k">*</span> <span class="pl-v">this</span>.mass));
+
+    <span class="pl-v">this</span>.speed.clamp(<span class="pl-v">this</span>.minSpeed, <span class="pl-v">this</span>.maxSpeed);
+    <span class="pl-v">this</span>.speed.scaleInPlace(<span class="pl-c1">1</span><span class="pl-k">-</span><span class="pl-v">this</span>.friction);
+
+    <span class="pl-v">this</span>.position.addInPlace(<span class="pl-v">this</span>.speed.scale(time/<span class="pl-c1">1000</span>));
+};
+
+<span class="pl-c">// Állítsuk a minimum és maximum küszöböket kicsit nagyobbra</span>
+Square.SPD_MIN <span class="pl-k">=</span> <span class="pl-k">-</span><span class="pl-c1">600</span>;
+Square.SPD_MAX <span class="pl-k">=</span> <span class="pl-c1">600</span>;
+</pre></div>
+
+<p>5., Bónusz: Ha szeretnénk valahogy vizualizálni a vektorokat, amik az egér pozíció felé mutatnak, akkor a következõ kódrészletet kell a négyzet kirajzolófüggvényeként írnunk:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c1">Square</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">drawTo</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">context</span>){
+    context.fillStyle <span class="pl-k">=</span> <span class="pl-v">this</span>.<span class="pl-c1">color</span>;
+    context.fillRect(<span class="pl-v">this</span>.position.<span class="pl-c1">x</span>,<span class="pl-v">this</span>.position.<span class="pl-c1">y</span>,<span class="pl-v">this</span>.<span class="pl-c1">size</span>, <span class="pl-v">this</span>.<span class="pl-c1">size</span>);
+    <span class="pl-c">// Ha van gyorsulás, akkor rajzoljunk</span>
+    <span class="pl-k">if</span> (<span class="pl-v">this</span>.acceleration.<span class="pl-c1">x</span> <span class="pl-k">||</span> <span class="pl-v">this</span>.acceleration.<span class="pl-c1">y</span>){
+        context.strokeStyle <span class="pl-k">=</span> <span class="pl-v">this</span>.<span class="pl-c1">color</span>;
+
+        <span class="pl-c">// Így jelezzük, hogy jegyezze fel a következõ lépéseket</span>
+        context.beginPath();
+
+        <span class="pl-c">// Menjünk a vásznon a négyzet pozíciójába</span>
+        context.<span class="pl-c1">moveTo</span>(<span class="pl-v">this</span>.position.<span class="pl-c1">x</span>,<span class="pl-v">this</span>.position.<span class="pl-c1">y</span>);
+
+        <span class="pl-c">// És húzzunk onnan vonalat egy olyan pozícióba, amit a gyorsulás vektor harmadával toltunk el (harmadolni kell, mert a gyorsulás vektor az egérbe mutató vektor 3 szorosa lett korábbról)</span>
+        context.lineTo(<span class="pl-v">this</span>.position.<span class="pl-c1">x</span><span class="pl-k">+</span><span class="pl-v">this</span>.acceleration.<span class="pl-c1">x</span>/<span class="pl-c1">3</span>, <span class="pl-v">this</span>.position.<span class="pl-c1">y</span><span class="pl-k">+</span><span class="pl-v">this</span>.acceleration.<span class="pl-c1">y</span>/<span class="pl-c1">3</span>);
+
+        <span class="pl-c">// Majd mondjuk, hogy ennyit akartunk most rajzolni, megrajzolhatjuk a feljegyzett lépéseket</span>
+        context.stroke();
+    }
+};
+</pre></div>
+
+<p>Ha mindezzel végeztünk, megint pihenjünk rá, és nézzük meg munkánk eredményét. Ezúttal már egy játékhoz hasonló kis demót kaptunk, ahol rugalmas (látható, vagy láthatatlan, a bónusz lépéstõl függ) fonalon lengethetünk négyzeteket, amely fonalat, ha elengedünk, a négyzetek lezuhannak.</p>
+
+<h2>
+<a id="user-content-9-Ágyú-és-robbanások" class="anchor" href="#9-%C3%81gy%C3%BA-%C3%A9s-robban%C3%A1sok" aria-hidden="true"><span class="octicon octicon-link"></span></a>9. Ágyú és robbanások</h2>
+
+<p>Gondolom, ha eddig volt türelmed eljutni a tutorialban, akkor neked is megfordult a fejedben, hogy milyen játékot lehetne ezekbõl az eszközökbõl, ezekkel a mechanikai elemekkel összerakni. Most még egy utolsó effektet bevezetünk, amivel tovább bõvítjük a keretrendszerünket, ami végül otthont fog adni egy játéknak, amirõl bõvebben a következõ részben írok.</p>
+
+<p>Most tehát még egy effektust vezetünk be, ami kicsit testes (sok kód kell hozzá), de annál látványosabb, és sokban feldobja a játékunkat. </p>
+
+<p>Ez az effektus egy robbanás szerû részecskerendszer lesz. Fel kell használjuk az eddigi négyzeteinket, amik engedelmeskednek a gravitációs törvényeknek, és valahogyan keretbe szervezzük õket, hogy vezényszóra lehessen õket generálni.</p>
+
+<p>Az effektus velejében annyit csinál, hogy legyárt egy halom olyan négyzetet, amelyek minimálisan variáltak a paramétereiket tekintve, és ezeket egy kezdõsebességgel elindítja egy irányba. Ennnek az lesz a hatása, hogy egy robbanás szerû látványt kapunk, törmelék vagy füst részecskékkel. Ezt még annyira általánosra csináljuk, hogy késõbb több helyen lehessen használni megfelelõ paraméterezéssel.</p>
+
+<p><em>Megjegyzés: a kódbázis már elég nagy kezd lenni, így jó, ha átnézed, és megérted, mielõtt folytatod a kódrészletek átmásolását.</em></p>
+
+<p>Fontos, hogy emlékezzünk, hogy a Square, négyzet osztályunk milyen módon paraméterezhetõ és készíthetõ, mert a robbanás ezeket a négyzeteket, vagy általánosabb nézetben részecskéket fogja használni alap építõelemeiként (általánosabban, hiszen csinálunk pl. egy kör osztályt, ami csak kinézetében különbözik a négyzettõl).</p>
+
+<p>Továbbá fontos, hogy emlékezzünk, hogy a javascriptben a függvények is objektumok. Tehát paraméterül lehet adni egy darab függvényt egy másiknak, aki meg tudja hívni az elõbbit, és tudja használni annak a hívásnak az eredményét. Ezt a nyelvi tulajdonságot is használni fogjuk a következõkben.</p>
+
+<p>Áttekintésként, ezt nem kell sehova írni:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Így hozunk létre egy új négyzetet:</span>
+<span class="pl-k">new</span> <span class="pl-en">Square</span>(<span class="pl-c1">40</span>,<span class="pl-c1">50</span>,{      size<span class="pl-k">:</span> <span class="pl-c1">3</span>,
+                        color<span class="pl-k">:</span> colors[<span class="pl-c1">3</span>],
+                        friction<span class="pl-k">:</span> <span class="pl-c1">0.05</span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">0.001</span>,
+                        world<span class="pl-k">:</span> world,
+                        mass<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()
+                    });
+<span class="pl-c">// ahol a paraméterek az x, y koordináták, és a paraméter objektum, ami nevesítve tartalmazza a tulajdonságokat</span>
+
+<span class="pl-c">// Így hozunk létre és adunk paraméterül egy függvényt egy másiknak:</span>
+<span class="pl-c">// Egy függvény, ami visszaadja a megadott paraméter kétszeresét</span>
+<span class="pl-k">var</span> <span class="pl-en">fn1</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">x</span>){
+ <span class="pl-k">return</span> <span class="pl-c1">2</span><span class="pl-k">*</span>x;
+};
+
+<span class="pl-c">// Egy függvény, ami 2 paramétert vár, az elsõ egy függvény</span>
+<span class="pl-k">var</span> <span class="pl-en">fn2</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">a</span>,<span class="pl-smi">b</span>){
+  <span class="pl-c">// és meghívja az elsõ függvényt a második paraméterrel</span>
+ <span class="pl-k">var</span> aResult <span class="pl-k">=</span> a(b);
+  <span class="pl-c">// majd visszaadja annak eredményét</span>
+ <span class="pl-k">return</span> aResult;
+};
+
+fn2(fn1, <span class="pl-c1">7</span>); <span class="pl-c">// tehát ennek a hívásnak a visszatérési értéke 14</span></pre></div>
+
+<p>Essünk tehát neki a robbanás osztály megtervezésének. A tervezés természetesen nem villámcsapásra megy, mint ahogy én a kódot megmutatom, hanem inkrementálisan fejlõdik az osztály aszerint, hogy a hívó fél milyen tulajdonságokat és viselkedést vár el tõle. Én itt már csak azt tálalom, hogy az én logikám szerint mi lett ennek a tervezésnek az eredménye. Ehhez hozzunk létre egy új <em>Explosion.js</em>-t és azt húzzuk is be a szokásos módon az <em>index.html</em>-be.</p>
+
+<p>Egy az egyben bemásolom a fájl kívánt tartalmát, és a kommentekkel magyarázom a részeit:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">/**</span>
+<span class="pl-c"> * Ez egy robbanás objektumot képviselõ osztály.</span>
+<span class="pl-c"> * Azt tudja, hogy beállítás után, egy függvényhívás hatására felrobban,</span>
+<span class="pl-c"> * amivel négyzeteket ad a világhoz a robbanás irányának megfelelõen, ezek pedig szabadon esnek, és repülnek a világban</span>
+<span class="pl-c"> * **/</span>
+
+<span class="pl-c">// Konstruktor, paraméter objektummal</span>
+<span class="pl-k">var</span> <span class="pl-en">Explosion</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">options</span>) {
+    <span class="pl-c">// ha nincs semmi megadva, legyen üres obj. a par.obj.</span>
+    options <span class="pl-k">=</span> options <span class="pl-k">||</span> {};
+    <span class="pl-c">// A paraméterobjektum részei a következõk:</span>
+
+    <span class="pl-c">// A világ, ahova be kell tömni a létrejövõ törmelék részecskéket</span>
+    <span class="pl-v">this</span>.world <span class="pl-k">=</span> options.world;
+    <span class="pl-c">// A kilövendõ részecskéket be lehet adni egy tömb formájában</span>
+    <span class="pl-v">this</span>.particles <span class="pl-k">=</span> options.particles <span class="pl-k">||</span> [];
+    <span class="pl-c">// És be lehet adni generátor függvénnyel, ami legyártja õket</span>
+    <span class="pl-v">this</span>.generator <span class="pl-k">=</span> options.generator;
+    <span class="pl-c">// Meg lehet, és illik adni, hogy mennyi részecskét szeretnénk</span>
+    <span class="pl-v">this</span>.particlesCount <span class="pl-k">=</span> options.particlesCount <span class="pl-k">||</span> <span class="pl-v">this</span>.particles.<span class="pl-c1">length</span> <span class="pl-k">||</span> <span class="pl-c1">0</span>;
+
+    <span class="pl-c">// Ekkor, ha nincs annyi részecske a részecsketömbben (ami akár üres vagy hiányzó is lehetett) akkor a generátorfüggvénnyel gyártunk további darabokat</span>
+    <span class="pl-k">if</span> (<span class="pl-v">this</span>.particles.<span class="pl-c1">length</span> <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.particlesCount) {
+        <span class="pl-c">// ha van generátorfüggvény</span>
+        <span class="pl-k">if</span> (<span class="pl-v">this</span>.generator) {
+            <span class="pl-c">// akkor hívogassuk addig, amíg nem lesz annyi a tömbben amennyit kértünk</span>
+            <span class="pl-k">while</span> (<span class="pl-v">this</span>.particles.<span class="pl-c1">length</span> <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.particlesCount) {
+                <span class="pl-k">var</span> newPart <span class="pl-k">=</span> <span class="pl-v">this</span>.generator();
+                <span class="pl-v">this</span>.particles.<span class="pl-c1">push</span>(newPart);
+            }
+        }
+    }
+
+    <span class="pl-c">// A kilövellés nyílási szélessége radiánokban</span>
+    <span class="pl-v">this</span>.coneWidth <span class="pl-k">=</span> options.coneWidth <span class="pl-k">||</span> <span class="pl-c1">Math</span>.<span class="pl-c1">PI</span> <span class="pl-k">*</span> <span class="pl-c1">2</span>;
+    <span class="pl-c">// A kilövellés elforgatása radiánokban a vízszinteshez képest</span>
+    <span class="pl-v">this</span>.coneOffset <span class="pl-k">=</span> options.coneOffset <span class="pl-k">||</span> <span class="pl-c1">0</span>;
+
+    <span class="pl-c">// A kilövellés minimum ereje és maximum ereje közt véletlen generálással kapnak sebességet a részecskék</span>
+    <span class="pl-v">this</span>.strengthMin <span class="pl-k">=</span> options.strengthMin <span class="pl-k">||</span> <span class="pl-c1">0</span>;
+    <span class="pl-v">this</span>.strengthMax <span class="pl-k">=</span> options.strengthMax <span class="pl-k">||</span> <span class="pl-c1">2</span>;
+};
+
+<span class="pl-c">// E függvény szolgál arra, hogy az elõkészített robbanás objektumot elsüsse, és a robbanás tényleg megtörténjen</span>
+<span class="pl-c1">Explosion</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">fire</span> <span class="pl-k">=</span> <span class="pl-k">function</span>() {
+    <span class="pl-c">// Minden részecskén végigsétálunk</span>
+    <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.particles.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+        <span class="pl-k">var</span> p <span class="pl-k">=</span> <span class="pl-v">this</span>.particles[i];
+        <span class="pl-c">// Ha nincs sebessége</span>
+        <span class="pl-k">if</span> (p.speed.<span class="pl-c1">length</span>() <span class="pl-k">==</span> <span class="pl-c1">0</span>) {
+            <span class="pl-c">// akkor generálunk neki egyet a nyílás paramétereinek megfelelõen egy irányt</span>
+            p.speed <span class="pl-k">=</span> Explosion._conal2(<span class="pl-v">this</span>.coneWidth, <span class="pl-v">this</span>.coneOffset);
+            <span class="pl-c">// és abban az irányban a min és max sebesség közt állítunk be kezdõsebességet véletlenszerûen</span>
+            p.speed.scaleInPlace(Explosion._randbetween(<span class="pl-v">this</span>.strengthMin, <span class="pl-v">this</span>.strengthMax));
+        }
+        <span class="pl-c">// végül a világhoz adjuk, így lefut a kirajzoló és animáló függvénye is minden körben, tehát megjelenik, és mozog.</span>
+        <span class="pl-v">this</span>.world.insert(p, <span class="pl-c1">true</span>, <span class="pl-c1">true</span>);
+
+    }
+};
+
+<span class="pl-c">// Ez a függvény szolgál arra, hogy a kilövellés nyílási szélessége és elforgatása szerint generáljon egy véletlenszerû irányt. Ha ez a nyílási szélesség 2pí, akkor bármilyen irányban repoülhet a részecske, különben egy tölcsér alak lesz</span>
+<span class="pl-c1">Explosion</span>.<span class="pl-en">_conal2</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">width</span>, <span class="pl-smi">offset</span>) {
+    <span class="pl-c">// Ennek a módja az, hogy csinálunk egy egységvektort, amit elõbb eltolunk az elforgatáshoz, majd továbbtoljuk egy véletlenszerû értékkel a 0 és a nyílás paraméter közt. Ekkor van egy irányvektorunk, aminek az x és y koordinátája kell. </span>
+
+    <span class="pl-c">// Határozzuk meg a minimális elfordulást</span>
+    <span class="pl-k">var</span> minRot <span class="pl-k">=</span> offset <span class="pl-k">-</span> width / <span class="pl-c1">2</span>;
+    <span class="pl-c">// Adjunk hozzá valamennyi véletlen elfordulást, ami max a nyílás szélessége</span>
+    <span class="pl-k">var</span> randomRot <span class="pl-k">=</span> minRot <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> width;
+
+    <span class="pl-c">// Az x és y koordináták ennek az elfordulás vektornak cos és sin leképzettjei.</span>
+    <span class="pl-k">var</span> x <span class="pl-k">=</span> <span class="pl-c1">Math</span>.<span class="pl-c1">cos</span>(randomRot);
+    <span class="pl-k">var</span> y <span class="pl-k">=</span> <span class="pl-c1">Math</span>.<span class="pl-c1">sin</span>(randomRot);
+    <span class="pl-c">// Tekintve, hogy a HTMLCanvas lefelé növeli az Y koordinátát, ezt itt negáljuk</span>
+    <span class="pl-k">return</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(x, <span class="pl-k">-</span>y);
+};
+
+<span class="pl-c">// Egy függvény egyszerû intervallum beli véletlen generálásra</span>
+<span class="pl-c1">Explosion</span>.<span class="pl-en">_randbetween</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">a</span>, <span class="pl-smi">b</span>) {
+    <span class="pl-k">return</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">Math</span>.<span class="pl-c1">abs</span>(a <span class="pl-k">-</span> b) <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">min</span>(a, b);
+};</pre></div>
+
+<p>Ez nagyjából lefedi az Explosion osztályt, ez az általános rész, most megnézzük hogy kell használni, és hogy hogy néz ki. Ismlétlem, természetesen én sem az olvasási sorrendnek megfelelõen gépeltem be elsõre ezt az osztályt, hanem a használat helyén felmerülõ igények szerint alakítottam ki, de nincs lehetõség sajnos a tutorial során az inkrementális tervezés folyamatát végigvezetni.</p>
+
+<p>Következõ lépésben használjuk ezt az osztályt, ha már ilyen szépen megírtuk. A <em>gameScript.js</em>-ben a sokat módosítgatott <em>handleInputs</em> függvényt kell a következõre alakítanunk, ahhoz, hogy kattintás hatására egy ágyúgolyót lõjünk az egér irányába:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// A handleInputs függvény legyen ez:</span>
+<span class="pl-k">function</span>(<span class="pl-smi">mouse</span>, <span class="pl-smi">keyboard</span>) {
+    <span class="pl-c">// csináljunk az egér pozícióból egy vektort (vektormûveletekhez)</span>
+    <span class="pl-k">var</span> mousePos <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(mouse.<span class="pl-c1">x</span>, mouse.<span class="pl-c1">y</span>);
+    <span class="pl-c">// Helyezzük el valahova az ágyút, pl a bal alsó sarokba, de bárhova lehet</span>
+    <span class="pl-k">var</span> cannonpos <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(<span class="pl-c1">0</span>,cHeight);
+
+    <span class="pl-c">// Ha a gombot megnyomták, akkor:</span>
+    <span class="pl-k">if</span> (mouse.<span class="pl-c1">left</span>) {
+        <span class="pl-c">// Csináljunk egy CIRCLE példányt az ágyúgolyónak</span>
+        <span class="pl-c">// Ez legyen ott ahol az ágyú van</span>
+        <span class="pl-k">var</span> cannonBall <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Circle</span>(cannonpos.<span class="pl-c1">x</span>,cannonpos.<span class="pl-c1">y</span>,{
+                    size<span class="pl-k">:</span> <span class="pl-c1">10</span>,
+                    color<span class="pl-k">:</span> colors[<span class="pl-c1">1</span>],
+                    friction<span class="pl-k">:</span> <span class="pl-c1">0.005</span>,
+                    world<span class="pl-k">:</span> world,
+                    mass<span class="pl-k">:</span> <span class="pl-c1">2</span>,
+                    <span class="pl-c">//  és sebessége legyen az egér felé mutató vektor</span>
+                    speed<span class="pl-k">:</span> mousePos.subtract(cannonpos).scaleInPlace(<span class="pl-c1">2</span>)
+                });
+        <span class="pl-c">// Csináljunk egy függvényt, amivel a törmelék részecskéket le lehet generálni</span>
+        <span class="pl-k">var</span> <span class="pl-en">pixelGeneratorFn</span> <span class="pl-k">=</span> <span class="pl-k">function</span>() {
+            <span class="pl-c">// A függvény adjon vissza egy új négyzet példányt, randomizált tömeggel, és súrlódással</span>
+                <span class="pl-k">return</span> <span class="pl-k">new</span> <span class="pl-en">Square</span>(cannonpos.<span class="pl-c1">x</span>,cannonpos.<span class="pl-c1">y</span>,{
+                    size<span class="pl-k">:</span> <span class="pl-c1">3</span>,
+                    color<span class="pl-k">:</span> colors[<span class="pl-c1">3</span>],
+                    friction<span class="pl-k">:</span> <span class="pl-c1">0.05</span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">0.001</span>,
+                    world<span class="pl-k">:</span> world,
+                    mass<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()
+                });
+            };
+
+        <span class="pl-c">// készítsük el elõre a paraméterobjektumot amit odaadunk az Explosion konstuktorának</span>
+        <span class="pl-k">var</span> explosionParams <span class="pl-k">=</span> {
+            <span class="pl-c">// A részecskék tömbje tartalmazza egyelõre az ágyúgolyót</span>
+            particles<span class="pl-k">:</span> [cannonBall],
+            <span class="pl-c">// De adjunk meg generátorfüggvényt h elõ tudjunk állítani törmeléket</span>
+            generator<span class="pl-k">:</span> pixelGeneratorFn,
+            world<span class="pl-k">:</span>world,
+            <span class="pl-c">// 10 darabot</span>
+            particlesCount<span class="pl-k">:</span> <span class="pl-c1">10</span>,
+            <span class="pl-c">// 100 és 400 sebesség közt</span>
+            strengthMin<span class="pl-k">:</span> <span class="pl-c1">100</span>,
+            strengthMax<span class="pl-k">:</span> <span class="pl-c1">400</span>,
+            <span class="pl-c">// egy PI/6 (30fok) szögû nyílással</span>
+            coneWidth<span class="pl-k">:</span><span class="pl-c1">Math</span>.<span class="pl-c1">PI</span>/<span class="pl-c1">6</span>,
+            <span class="pl-c">// úgy elforgatva, hogy az egér pozíció felé mutasson</span>
+            coneOffset<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">atan2</span>(<span class="pl-k">-</span>mousePos.subtract(cannonpos).<span class="pl-c1">y</span>, mousePos.subtract(cannonpos).<span class="pl-c1">x</span>)
+        };
+
+        <span class="pl-c">// Készítsük el a robbanás példányt az elõzõleg összeállított paraméterekkel</span>
+        <span class="pl-k">var</span> explosion <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Explosion</span>(explosionParams);
+
+        <span class="pl-c">// majd süssük is el, hogy lássuk a hatását </span>
+        explosion.fire();
+        <span class="pl-c">// nullázzuk le a kattintás jelzõ változót, hogy csak 1 robbanást süssünk el egy kattintással</span>
+        mouse.<span class="pl-c1">left</span><span class="pl-k">=</span><span class="pl-c1">0</span>;
+    }
+}</pre></div>
+
+<p>Miután ismét megújítottuk a <em>handleInputs</em> képességeit, tisztázzuk le az egér állapot kezelését a következõképp:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Az összetett eseménykezelõ helyett, amit a 8. fejezetben csináltunk legyen 3 egyszerûbb eseménykezelõ a triviális állapotváltozásokra</span>
+
+<span class="pl-c1">canvas</span>.<span class="pl-en">onmousedown</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(){
+    mouse.<span class="pl-c1">left</span> <span class="pl-k">=</span> <span class="pl-c1">1</span>;
+};
+
+<span class="pl-c1">canvas</span>.<span class="pl-en">onmouseup</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(){
+    mouse.<span class="pl-c1">left</span> <span class="pl-k">=</span> <span class="pl-c1">0</span>;
+};
+
+<span class="pl-c1">canvas</span>.<span class="pl-en">onmousemove</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">ev</span>) {
+    <span class="pl-k">var</span> rect <span class="pl-k">=</span> canvas.getBoundingClientRect();
+    mouse.<span class="pl-c1">x</span> <span class="pl-k">=</span> ev.offsetX <span class="pl-k">||</span> ev.clientX <span class="pl-k">-</span> rect.<span class="pl-c1">left</span>;
+    mouse.<span class="pl-c1">y</span> <span class="pl-k">=</span> ev.offsetY <span class="pl-k">||</span> ev.clientY <span class="pl-k">-</span> rect.<span class="pl-c1">top</span>;
+};</pre></div>
+
+<p>Huh, a sok kódmásolgatás és <em>értelmezés</em> végére már csak egy apróság maradt. Az ágyúgolyóhoz egy Circle osztályt példányosítottam, ami nem létezik, de könnyen orvosolható. A körök a megjelenésükön kívül minden másban teljesen azonosan viselkednek a négyzetekkel. Ezért megtehetjük pl. azt, hogy egy az egyben lemásoljuk, és átnevezgetjük a <em>Square.js</em>-t, és a benne lévõ változókat egy <em>Circle.js</em>-nek megfelelõen, illetve be is hivatkozzuk azt az <em>index.html</em>-ben.</p>
+
+<p>Az egyetlen hely, ahol meg kell változtatni a Circle osztályt:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Az az, hogy máshogy kell kirajzolni, mint a négyzetet</span>
+<span class="pl-c1">Circle</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">drawTo</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">context</span>){
+    context.fillStyle <span class="pl-k">=</span> <span class="pl-v">this</span>.<span class="pl-c1">color</span>;
+    <span class="pl-c">// Kezdjünk egy új útvonalat rajzolni</span>
+    context.beginPath();
+    <span class="pl-c">// Rajzoljunk egy körívet, ami 0 pozícióból 2*PI-ig megy, tehát teljes kör lesz</span>
+    context.arc(<span class="pl-v">this</span>.position.<span class="pl-c1">x</span>,<span class="pl-v">this</span>.position.<span class="pl-c1">y</span>, <span class="pl-v">this</span>.<span class="pl-c1">size</span>/<span class="pl-c1">2</span>, <span class="pl-c1">0</span>, <span class="pl-c1">2</span><span class="pl-k">*</span><span class="pl-c1">Math</span>.<span class="pl-c1">PI</span>);
+    <span class="pl-c">// Majd kihúzás helyett töltsük fel azt</span>
+    context.fill();
+};</pre></div>
+
+<p>Ha nem rontottunk el semmit, és én sem felejtettem el semmit, akkor ez a demó már egy elég jól kinézõ demó, ami ágyúgolyókat lõ az egér irányába, és azt látványossá teszi füst-(és/vagy)-törmelék részecskékkel. A paraméterekkel próbálkozhatsz, hogy sajátos kinézetet kapj.</p>
+
+<p>A következõ részben az eddig felépített dolgok használatával, és testreszabásával fogunk egy minimális játéklogikát megvalósítani.</p>
+
+<h2>
+<a id="user-content-10-játék-alapok---a-tank" class="anchor" href="#10-j%C3%A1t%C3%A9k-alapok---a-tank" aria-hidden="true"><span class="octicon octicon-link"></span></a>10. Játék alapok - A tank</h2>
+
+<p>A játék tehát egy ügyességi játék lesz, amelyben repülõ ellenségeket kell lelövöldözni a földön mozgó tankunkból. Ebben a fejezetben létrehozzuk a játékost képviselõ tankot, megoldjuk annak irányítását, javítunk a részecskék memória- és processzorhasználatán, és használjuk az elõzõekben elkészített robbanást, mint a játékos fegyverét.</p>
+
+<p>A legegyszerûbb lépéssel kezdem, a tisztogatással. Az elõzõ demóban látható volt, hogy amikor kilõttünk valamit, a robbanással keletkezõ törmelék és ágyúgolyó valószínûleg soha nem került kitörlésre a világból, ezért sok lövés után a render-ciklus akár részecskék ezreit is animálni és rajzolni volt kénytelen. Ez nyilvánvaló pazarlás, hiszen nincs szükség a részecskéknek örök életre. A következõkben a Circle és Square osztályokon bevezetünk egy <em>.life</em> változót, amellyel szabályozhatjuk meddig éljenek a részecskék.</p>
+
+<p>Tehát mind a Square.js-ben, mind a Circle.js-ben az analóg módon megfelelõ részeken vigyük fel a következõt:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Tehát a Circle és a Square osztályokban is!</span>
+
+<span class="pl-c">// A konstruktorban:</span>
+<span class="pl-c">// Átvesszük a paraméterobjektumról az entitás élethosszát, ha más nincs, akkor végtelen életû</span>
+    <span class="pl-v">this</span>.life <span class="pl-k">=</span> options.life <span class="pl-k">||</span> <span class="pl-c1">Infinity</span>;
+
+<span class="pl-c">// Az .animate függvény legvégén:</span>
+<span class="pl-c">// Csökkentjük életét a leanimált idõvel, és ha élete kifutott, a világból töröljük</span>
+    <span class="pl-v">this</span>.life<span class="pl-k">-=</span> time;
+    <span class="pl-k">if</span> (<span class="pl-v">this</span>.life<span class="pl-k">&lt;</span><span class="pl-c1">0</span>) <span class="pl-v">this</span>.world.<span class="pl-c1">remove</span>(<span class="pl-v">this</span>);</pre></div>
+
+<p>Ez egy azonnali következményként vonzza magával, hogy a <em>world</em> objektumunknak kell, hogy legyen olyan <em>.remove</em> függvénye, amivel törölhetõ egy objektum a világból. Ezt a <em>gameScript.js</em>-ben a world objektumon kell felvegyük, és a következõképp néz ki:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> world <span class="pl-k">=</span> {
+    gravity<span class="pl-k">:</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(<span class="pl-c1">0</span>, <span class="pl-c1">200</span>),
+    <span class="pl-en">insert</span>: <span class="pl-k">function</span>(<span class="pl-smi">entity</span>, <span class="pl-smi">asDrawable</span>, <span class="pl-smi">asAnimatable</span>) {
+        <span class="pl-c">//... ami eddig is</span>
+    },
+
+    <span class="pl-c">// Ez a függvény képes eltávolítani egy elemet a világ minden referencia tömbjébõl</span>
+    <span class="pl-en">remove</span>: <span class="pl-k">function</span>(<span class="pl-smi">entity</span>){
+        <span class="pl-c">// Ha az entitások közt van, vegyük ki</span>
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>; i<span class="pl-k">&lt;</span>world.<span class="pl-c1">entities</span>.<span class="pl-c1">length</span>;i<span class="pl-k">++</span>){
+            <span class="pl-k">if</span> (world.<span class="pl-c1">entities</span>[i]<span class="pl-k">==</span>entity) {
+                world.<span class="pl-c1">entities</span>.<span class="pl-c1">splice</span>(i,<span class="pl-c1">1</span>);
+                <span class="pl-k">break</span>;
+            }
+        }
+        <span class="pl-c">// Ugyanígy a rajzolhatókra</span>
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>; i<span class="pl-k">&lt;</span>world.drawables.<span class="pl-c1">length</span>;i<span class="pl-k">++</span>){
+            <span class="pl-k">if</span> (world.drawables[i]<span class="pl-k">==</span>entity) {
+                world.drawables.<span class="pl-c1">splice</span>(i,<span class="pl-c1">1</span>);
+                <span class="pl-k">break</span>;
+            }
+        }
+        <span class="pl-c">// És az animálhatókra</span>
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i<span class="pl-k">=</span><span class="pl-c1">0</span>; i<span class="pl-k">&lt;</span>world.animatables.<span class="pl-c1">length</span>;i<span class="pl-k">++</span>){
+            <span class="pl-k">if</span> (world.animatables[i]<span class="pl-k">==</span>entity) {
+                world.animatables.<span class="pl-c1">splice</span>(i,<span class="pl-c1">1</span>);
+                <span class="pl-k">break</span>;
+            }
+        }
+    },
+
+    <span class="pl-c">// ...továbbiak...</span></pre></div>
+
+<p>Így megoldjuk tehát, hogyha készítéskor megadnak egy <em>life</em> értéket a részecskének, akkor az annyi millisecundumig fog élni. Eztán kikerül a világból, és nem lesz többé animálva, sem kirajzolva. A tulajdonság beállítására most nem térek ki, az látható lesz a következõ kódrészletekben is.</p>
+
+<p>Következõ, nehezebb lépésként készítsük el a játékos objektumot, amely a játékos állapotát tárolja, és õt rajzolja ki. Indoklások a kódban komment formában:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Egy objektum a játékosnak</span>
+<span class="pl-k">var</span> player <span class="pl-k">=</span> {
+
+    <span class="pl-c">// tároljuk a játékos helyét</span>
+    position<span class="pl-k">:</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(cWidth/<span class="pl-c1">2</span>, cHeight/<span class="pl-c1">2</span>),
+    <span class="pl-c">// aktuális sebességét</span>
+    speed<span class="pl-k">:</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(),
+    <span class="pl-c">// ágyújának állását egy vektorban</span>
+    cannonVector<span class="pl-k">:</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(),
+
+    <span class="pl-c">// a játékos kirajzolható</span>
+    <span class="pl-en">drawTo</span>: <span class="pl-k">function</span>(<span class="pl-smi">ctx</span>){
+        <span class="pl-c">// rajzoláshoz használjuk ezt a színt</span>
+        ctx.fillStyle <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>blueviolet<span class="pl-pds">"</span></span>;
+
+        <span class="pl-c">// rajzoljunk ki egy kört, ami a tank felsõ része</span>
+        ctx.beginPath();
+        ctx.arc(player.position.<span class="pl-c1">x</span>, player.position.<span class="pl-c1">y</span>, <span class="pl-c1">6</span>, <span class="pl-c1">0</span>, <span class="pl-c1">Math</span>.<span class="pl-c1">PI</span><span class="pl-k">*</span><span class="pl-c1">2</span>);
+        ctx.fill();
+
+        <span class="pl-c">// rajzoljunk ki egy kissé lefelé eltolt téglalapot, ami a tank teste</span>
+        ctx.fillRect(player.position.<span class="pl-c1">x</span><span class="pl-k">-</span><span class="pl-c1">12</span>,player.position.<span class="pl-c1">y</span><span class="pl-k">+</span><span class="pl-c1">6</span><span class="pl-k">-</span><span class="pl-c1">4</span>,<span class="pl-c1">24</span>,<span class="pl-c1">8</span>);
+
+        <span class="pl-c">// végül rajzoljunk egy kis pálcikát, ami az ágyú irányába mutat</span>
+        ctx.beginPath();
+        <span class="pl-c">// a középpontban kezdõdik</span>
+        ctx.<span class="pl-c1">moveTo</span>(player.position.<span class="pl-c1">x</span>,player.position.<span class="pl-c1">y</span>);
+        <span class="pl-c">// és a középponthoz képest az ágyú vektor koordinátáival van eltolva</span>
+        ctx.lineTo(player.position.<span class="pl-c1">x</span> <span class="pl-k">+</span> player.cannonVector.<span class="pl-c1">x</span>, player.position.<span class="pl-c1">y</span> <span class="pl-k">+</span> player.cannonVector.<span class="pl-c1">y</span>);
+        ctx.stroke();
+    },
+
+    <span class="pl-c">// a játékos animálható is</span>
+    <span class="pl-en">animate</span>: <span class="pl-k">function</span>(<span class="pl-smi">time</span>){
+        <span class="pl-c">// Az ágyúirányt az egér felé mutató vektorral készítjük el</span>
+        <span class="pl-k">var</span> mousePos <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(mouse.<span class="pl-c1">x</span>, mouse.<span class="pl-c1">y</span>);
+        <span class="pl-c">// Vegyük a különbségvektort ami a játékostól az egérbe mutat, azt normalizáljuk (1 hosszúvá tesszük) és 15-szörösre nyújtjuk</span>
+        player.cannonVector <span class="pl-k">=</span> mousePos.subtract(player.position).normalize().scaleInPlace(<span class="pl-c1">15</span>);
+        player.position.addInPlace(player.speed.scale(time/<span class="pl-c1">1000</span>));
+    }
+};
+
+<span class="pl-c">// Ha megvagyunk a játékossal, be is szúrhatjuk a világba, hogy lássuk azt!</span>
+world.insert(player, <span class="pl-c1">true</span>, <span class="pl-c1">true</span>);</pre></div>
+
+<p>Ha elkészültünk a játékossal, próbáljuk megcsinálni annak iránnyítását. Ezt a billentyûzettel oldjuk meg, amihez már lehet hogy korábban létre is hoztunk egy virtuális billentyûzet objektumot. Ez nagyon hasonlít az egér megoldására. A lényeg, hogy egy virtuális billentyûzet objekumban tároljuk, hogy milyen állapotban van a valós billentyûzet, és animációkor ezt olvassuk ki, és ezzel mozgatjuk a tankot.</p>
+
+<p>Tehát ez kerül a <em>gameScript.js</em> végére:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">//... elõtte az egér eseménykezelõk voltak</span>
+
+<span class="pl-c">// Az eddigi var keyboard = {}; helyett-&gt;</span>
+<span class="pl-k">var</span> keyboard <span class="pl-k">=</span> {
+    <span class="pl-c1">38</span><span class="pl-k">:</span><span class="pl-c1">0</span>, <span class="pl-c">// fel</span>
+    <span class="pl-c1">40</span><span class="pl-k">:</span><span class="pl-c1">0</span>, <span class="pl-c">// le</span>
+    <span class="pl-c1">37</span><span class="pl-k">:</span><span class="pl-c1">0</span>, <span class="pl-c">// bal</span>
+    <span class="pl-c1">39</span><span class="pl-k">:</span><span class="pl-c1">0</span>,  <span class="pl-c">// jobb</span>
+    <span class="pl-c1">87</span><span class="pl-k">:</span><span class="pl-c1">0</span>, <span class="pl-c">// W - fel</span>
+    <span class="pl-c1">83</span><span class="pl-k">:</span><span class="pl-c1">0</span>, <span class="pl-c">// S - le</span>
+    <span class="pl-c1">65</span><span class="pl-k">:</span><span class="pl-c1">0</span>, <span class="pl-c">// A - bal</span>
+    <span class="pl-c1">68</span><span class="pl-k">:</span><span class="pl-c1">0</span>, <span class="pl-c">// D - jobb</span>
+};
+<span class="pl-c">// Gomblenyomás esetén beállítjuk azt a tároló objektumunkon</span>
+<span class="pl-c1">document</span>.<span class="pl-en">onkeydown</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">ev</span>){
+    <span class="pl-k">if</span> (ev.keyCode <span class="pl-k">in</span> keyboard){
+        <span class="pl-c">// egy 1-essel jelezzük a gomb kódja mögötti értékben, hogy éppen lenyomva van</span>
+        keyboard[ev.keyCode]<span class="pl-k">=</span><span class="pl-c1">1</span>;
+        <span class="pl-k">return</span> <span class="pl-c1">false</span>;
+    }
+    <span class="pl-k">return</span> <span class="pl-c1">true</span>;
+};
+<span class="pl-c">// Gombfelengedés esetén, ha a gomb a lenyomottak közt van</span>
+<span class="pl-c1">document</span>.<span class="pl-en">onkeyup</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">ev</span>){
+    <span class="pl-k">if</span> (ev.keyCode <span class="pl-k">in</span> keyboard){
+        <span class="pl-c">// akkor lenullázzuk a gomb kódja mögötti értéket</span>
+        keyboard[ev.keyCode]<span class="pl-k">=</span><span class="pl-c1">0</span>;
+        <span class="pl-k">return</span> <span class="pl-c1">false</span>;
+    }
+    <span class="pl-k">return</span> <span class="pl-c1">true</span>;
+};
+
+<span class="pl-c">// A kód végén marad a renderCiklus elsõ idõzítése</span>
+<span class="pl-c1">window</span>.requestAnimationFrame(gameLoop);</pre></div>
+
+<p>Ha már megvan a billentyûzet állapota, akkor nyilvánvalóan ott kell változtatnunk a kódon, ahol az inputokat olvassuk ki, ez pedig a <em>handleInputs</em> függvény.</p>
+
+<div class="highlight highlight-javascript"><pre>    <span class="pl-k">function</span>(<span class="pl-smi">mouse</span>, <span class="pl-smi">keyboard</span>) {
+        <span class="pl-c">// Számítsuk ki a tank aktuális sebességét a lenyomott gombokból</span>
+        player.speed.<span class="pl-c1">x</span> <span class="pl-k">=</span> (keyboard[<span class="pl-c1">39</span>]<span class="pl-k">+</span>keyboard[<span class="pl-c1">68</span>] <span class="pl-k">-</span> keyboard[<span class="pl-c1">37</span>] <span class="pl-k">-</span> keyboard[<span class="pl-c1">65</span>])<span class="pl-k">*</span><span class="pl-c1">100</span>;
+        player.speed.<span class="pl-c1">y</span> <span class="pl-k">=</span> (keyboard[<span class="pl-c1">40</span>]<span class="pl-k">+</span>keyboard[<span class="pl-c1">83</span>] <span class="pl-k">-</span> keyboard[<span class="pl-c1">38</span>] <span class="pl-k">-</span> keyboard[<span class="pl-c1">87</span>])<span class="pl-k">*</span><span class="pl-c1">100</span>;
+
+        <span class="pl-c">/// folyt köv...</span></pre></div>
+
+<p>Ha hagyjuk a <em>handleInputs</em> további részét úgy ahogy volt, vagy szimplán csak kitöröljük, akkor kipróbálhatjuk a játék mostani állpotát, és láthatjuk, hogy a tankunk a WASD vagy a nyíl gombokkal nagyszerûen irányítható a pályán. Persze ez még nem a végleges, de mindig jó látni munkánk gyümölcsét.</p>
+
+<p>A fejezet utolsó lépésében pedig megoldjuk, hogy az elkészített robbanás és ágyúgolyó a tankunk csövébõl induljon ki.</p>
+
+<p>Ehhez az elõbb félbehagyott <em>handleInputs</em> függvényt kell folytassuk, kitörölve vagy átírva az elõzõ fejezet robbanását megvalósító kódrészletet:</p>
+
+<div class="highlight highlight-javascript"><pre>    <span class="pl-c">/// folyt köv...</span>
+    <span class="pl-k">var</span> mousePos <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(mouse.<span class="pl-c1">x</span>, mouse.<span class="pl-c1">y</span>);
+
+    <span class="pl-c">// kiszámítjuk, hol lenne a tank ágyújának vége, innen kell majd indítani a robbanásokat</span>
+    <span class="pl-k">var</span> cannonEnd <span class="pl-k">=</span> player.position.<span class="pl-c1">add</span>(player.cannonVector);
+    <span class="pl-c">// kiszámíthatunk elõre egy vektort ami a játékosból az egérhez vezet, hasznos lesz</span>
+    <span class="pl-k">var</span> playerToMouseVector <span class="pl-k">=</span> mousePos.subtract(player.position);
+    <span class="pl-c">// Tehát, ha gombnyomást olvastunk, akkor-&gt;</span>
+    <span class="pl-k">if</span> (mouse.<span class="pl-c1">left</span>) {
+        <span class="pl-c">// Készítsük el a robbanásunkat (most átmeneti változók nélkül)</span>
+        <span class="pl-k">var</span> explosion <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Explosion</span>({
+            particles<span class="pl-k">:</span> [<span class="pl-k">new</span> <span class="pl-en">Circle</span>(<span class="pl-c1">0</span>,<span class="pl-c1">0</span>,{
+                    size<span class="pl-k">:</span> <span class="pl-c1">10</span>,
+                    color<span class="pl-k">:</span> colors[<span class="pl-c1">1</span>],
+                    friction<span class="pl-k">:</span> <span class="pl-c1">0.005</span>,
+                    world<span class="pl-k">:</span> world,
+                    mass<span class="pl-k">:</span> <span class="pl-c1">2</span>,
+                    <span class="pl-c">// az ágyúgolyó sebessége legyen 700 és mutasson a játékostól az egér felé</span>
+                    speed<span class="pl-k">:</span> playerToMouseVector.clone().normalize().scaleInPlace(<span class="pl-c1">700</span>),
+                    <span class="pl-c">// és éljen 10mp-ig</span>
+                    life<span class="pl-k">:</span> <span class="pl-c1">10000</span>
+                })],
+                <span class="pl-c">// törmelék generátor</span>
+            <span class="pl-en">generator</span>: <span class="pl-k">function</span>() {
+                <span class="pl-k">return</span> <span class="pl-k">new</span> <span class="pl-en">Square</span>(<span class="pl-c1">0</span>,<span class="pl-c1">0</span>,{
+                    size<span class="pl-k">:</span> <span class="pl-c1">3</span>,
+                    <span class="pl-c">// a színeit válogassa egy globális tömbbõl (késõbb)</span>
+                    color<span class="pl-k">:</span> fireColors[<span class="pl-c1">Math</span>.<span class="pl-c1">floor</span>(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span><span class="pl-c1">3</span>)],
+                    friction<span class="pl-k">:</span> <span class="pl-c1">0.05</span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">0.001</span>,
+                    world<span class="pl-k">:</span> world,
+                    mass<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>(),
+                    <span class="pl-c">// és éljenek 800-1000ms-t</span>
+                    life<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span><span class="pl-c1">200</span><span class="pl-k">+</span><span class="pl-c1">800</span>
+                });
+            },
+            world<span class="pl-k">:</span>world,
+            particlesCount<span class="pl-k">:</span> <span class="pl-c1">10</span>,
+            strengthMin<span class="pl-k">:</span> <span class="pl-c1">100</span>,
+            strengthMax<span class="pl-k">:</span> <span class="pl-c1">400</span>,
+            <span class="pl-c">// 22.5 fokos szórással</span>
+            coneWidth<span class="pl-k">:</span><span class="pl-c1">Math</span>.<span class="pl-c1">PI</span>/<span class="pl-c1">8</span>,
+            <span class="pl-c">// a játékos-&gt;egér vektor irányának megfelelõen</span>
+            coneOffset<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">atan2</span>(<span class="pl-k">-</span>playerToMouseVector.<span class="pl-c1">y</span>, playerToMouseVector.<span class="pl-c1">x</span>)
+        });
+
+        <span class="pl-c">// süssük el az ágyúvég helyzetében (hoppá, új paraméter)</span>
+        explosion.fire(cannonEnd);
+        mouse.<span class="pl-c1">left</span><span class="pl-k">=</span><span class="pl-c1">0</span>;
+    }
+}
+<span class="pl-c">/// ... további függvények a world objektumon.</span>
+
+<span class="pl-c">// Valami globális helyen, objektumokon kívül:</span>
+<span class="pl-c">// Egy tömb, amiben a tûz színeinek megfelelõ kódok vannak</span>
+<span class="pl-k">var</span> fireColors <span class="pl-k">=</span> [<span class="pl-s"><span class="pl-pds">'</span>#FFFF47<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>#FFBC42<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>#FF5A1D<span class="pl-pds">'</span></span>];</pre></div>
+
+<p>Észrevehetjük, hogy nem bonyolult, vagy nehéz a kódrészlet, ami az ágyúgolyó kilövését oldja meg, szimplán csak sokat kell paraméterezgetni, mert általánosra próbáltuk megcsinálni a robbanást az újrafelhasználhatóság miatt.</p>
+
+<p>Apropó robbanás, az elõzõ kódrészlet végén jeleztem, hogy úgy használjuk itt a <em>.fire()</em> függvényt, amit eddig nem csináltunk: megadjuk neki, hogy milyen helyzetbõl tüzelje a robbanást. Ehhez kell igazítanunk az Explosion osztályunk megfelelõ függvényét:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c1">Explosion</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">fire</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">origin</span>) {
+    <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.particles.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+        <span class="pl-k">var</span> p <span class="pl-k">=</span> <span class="pl-v">this</span>.particles[i];
+        <span class="pl-k">if</span> (p.speed.<span class="pl-c1">length</span>() <span class="pl-k">==</span> <span class="pl-c1">0</span>) {
+            p.speed <span class="pl-k">=</span> Explosion._conal2(<span class="pl-v">this</span>.coneWidth, <span class="pl-v">this</span>.coneOffset);
+            p.speed.scaleInPlace(Explosion._randbetween(<span class="pl-v">this</span>.strengthMin, <span class="pl-v">this</span>.strengthMax));
+        }
+        <span class="pl-c">// A változás az, hogyha van robbanás eredet megadva, akkor helyezzünk át oda minden részecskét beszúrás elõtt</span>
+        <span class="pl-k">if</span> (origin){
+            p.position.<span class="pl-c1">x</span> <span class="pl-k">=</span> origin.<span class="pl-c1">x</span>;
+            p.position.<span class="pl-c1">y</span> <span class="pl-k">=</span> origin.<span class="pl-c1">y</span>;
+        }
+        <span class="pl-v">this</span>.world.insert(p, <span class="pl-c1">true</span>, <span class="pl-c1">true</span>);
+    }
+};</pre></div>
+
+<p>Szóval, talán végeztünk. A tankunk mozog, és golyókat lõ, amiket tûz részecskék kísérnek, és a tank kivételével mindenki engedelmeskedik a gravitációnak. Nagyszerû látvány, nemde?</p>
+
+<h2>
+<a id="user-content-11-játék-alapok---Ütközésdetektálás" class="anchor" href="#11-j%C3%A1t%C3%A9k-alapok---%C3%9Ctk%C3%B6z%C3%A9sdetekt%C3%A1l%C3%A1s" aria-hidden="true"><span class="octicon octicon-link"></span></a>11. Játék alapok - Ütközésdetektálás</h2>
+
+<p>A játékokban az ütközésdetektálás fontos pont. A játékok legtöbb mechanikája és logikája valamilyen formában arra épül, hogy egyes egységek, entitások ütköznek. Ezt detektálni nem mindig triviális feladat, de a mi esetünkben (mivel nagyon egyszerû entitásaink vannak) könnyen megoldható. </p>
+
+<p>Két négyzet közti ütközés az AABB módszerrel megoldható, de leegyszerûsíthetõ a bennfoglaló körök ütköztetésére. És a körök ütközésének detektálása pedig teljesen triviális: ha középpontjaik távolsága kisebb mint a sugarak összege, akkor ütköznek.</p>
+
+<p>Két dolgot megkülönböztethetünk az ütközésdetektálás implementálása során: magát az ütközés detektálást, és az ütközés választ. Ebben a lépésben fõként az ütközés detektálást készítjük el, ütközésválaszként egy egyszerû, jelzés értékû logolást teszünk.</p>
+
+<p>Ez tehát 2 függvényt indokol azokon az osztályokon, objektumokon, akiket ütköztetni szeretnénk, egy <em>.intersects(other)</em> és egy <em>.handleCollisionWith(other)</em> függvényt. Most gondoljunk bele, hogy ki az akit valaha is ütköztetni szeretnénk?</p>
+
+<p>Az ellenségeket és a lövedékeket, és most megsúgom, hogy az egyszerûség kedvéért az ellenséget a lövedékbõl fogjuk származtatni. Így tehát elég lenne csak a Circle osztályon megírni, de a példa kedvéért megírhatjuk a játékoson is. </p>
+
+<p>Elõször helyezzük el ezt a két függvényt a játékos objektumunkon:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> player <span class="pl-k">=</span> {
+    <span class="pl-c">// ... elõzõ függvényeken túl</span>
+
+    <span class="pl-c">// ...</span>
+    <span class="pl-c">// Egy függvény az ütközésdetektálásra</span>
+    <span class="pl-en">intersects</span>: <span class="pl-k">function</span> (<span class="pl-smi">other</span>) {
+        <span class="pl-c">// Kb egy 8 sugaru korrel lehet bennfoglalni a jatekost</span>
+        <span class="pl-k">var</span> playersBoundingCircleRadius <span class="pl-k">=</span> <span class="pl-c1">8</span>;
+
+        <span class="pl-c">// Megnezzuk a vizsgalt targy bennfoglalo sugarat</span>
+        <span class="pl-k">if</span> (other <span class="pl-k">instanceof</span> Square) {
+            <span class="pl-c">// Negyzeteknel az atlo fele</span>
+            <span class="pl-k">var</span> boundingCircleRadius <span class="pl-k">=</span> <span class="pl-c1">Math</span>.<span class="pl-c1">sqrt</span>(<span class="pl-c1">2</span>) <span class="pl-k">*</span> other.<span class="pl-c1">size</span> / <span class="pl-c1">2</span>;
+        } <span class="pl-k">else</span> <span class="pl-k">if</span> (other <span class="pl-k">instanceof</span> Circle) {
+            <span class="pl-c">// Koroknel trivialis</span>
+            <span class="pl-k">var</span> boundingCircleRadius <span class="pl-k">=</span> other.<span class="pl-c1">size</span>;
+        }
+        <span class="pl-c">// A tavolsag az egyik kozeppontbol masik kozeppontba huzott vektor hossza</span>
+        <span class="pl-k">var</span> distance <span class="pl-k">=</span> other.position.subtract(player.position).<span class="pl-c1">length</span>();
+        <span class="pl-c">// Ha ez a tavolsag kisebb mint a ket bennfoglalo kor sugaranak osszege, akkor metszik egymast</span>
+        <span class="pl-k">if</span> (distance <span class="pl-k">&lt;</span> (playersBoundingCircleRadius <span class="pl-k">+</span> boundingCircleRadius)) {
+            <span class="pl-k">return</span> <span class="pl-c1">true</span>;
+        } <span class="pl-k">else</span> {
+            <span class="pl-k">return</span> <span class="pl-c1">false</span>;
+        }
+    },
+    <span class="pl-c">// Az ütközésválasz pedig egy egyszerû logolás</span>
+    <span class="pl-en">handleCollisionWith</span>: <span class="pl-k">function</span> (<span class="pl-smi">other</span>) {
+        <span class="pl-c">// Ki ütközött kivel?</span>
+        <span class="pl-en">console</span><span class="pl-c1">.log</span>(<span class="pl-v">this</span>, <span class="pl-s"><span class="pl-pds">"</span>collided<span class="pl-pds">"</span></span>, other);
+    }
+};</pre></div>
+
+<p>Ehhez nagyon hasonló lesz a Circle osztály ütközésdetektálása és válasza:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Ugyanaz mint a játékosnál kb.</span>
+<span class="pl-c1">Circle</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">intersects</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">other</span>) {
+    <span class="pl-c">// itt nem kell külön bennfoglaló kört becsülni a körnek, hiszen a this.size pont az</span>
+    <span class="pl-k">if</span> (other <span class="pl-k">instanceof</span> Square) {
+        <span class="pl-k">var</span> boundingCircleRadius <span class="pl-k">=</span> other.<span class="pl-c1">size</span> <span class="pl-k">*</span> <span class="pl-c1">Math</span>.<span class="pl-c1">sqrt</span>(<span class="pl-c1">2</span>) / <span class="pl-c1">2</span>;
+    } <span class="pl-k">else</span> <span class="pl-k">if</span> (other <span class="pl-k">instanceof</span> Circle) {
+        <span class="pl-k">var</span> boundingCircleRadius <span class="pl-k">=</span> other.<span class="pl-c1">size</span>;
+    }
+    <span class="pl-k">var</span> distance <span class="pl-k">=</span> <span class="pl-v">this</span>.position.subtract(other.position).<span class="pl-c1">length</span>();
+    <span class="pl-k">if</span> (distance <span class="pl-k">&lt;</span> (<span class="pl-v">this</span>.<span class="pl-c1">size</span> <span class="pl-k">+</span> boundingCircleRadius)) {
+        <span class="pl-k">return</span> <span class="pl-c1">true</span>;
+    } <span class="pl-k">else</span> {
+        <span class="pl-k">return</span> <span class="pl-c1">false</span>;
+    }
+};
+
+<span class="pl-c">// És az ütközésválasz is</span>
+<span class="pl-c1">Circle</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">handleCollisionWith</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">other</span>) {
+    <span class="pl-en">console</span><span class="pl-c1">.log</span>(<span class="pl-v">this</span>, <span class="pl-s"><span class="pl-pds">"</span>collided<span class="pl-pds">"</span></span>, other);
+};</pre></div>
+
+<p>Szóval megvagyunk, felkészítettük a fontosabb entitásokat az ütköztetésre, már csak egy olyan logika kell, aki végigteszteli párosával az összes entitást, és megnézi, hogy ütköznek-e. Mivel ez egy minden körben lefutó ciklusnak néz ki, és nem függ a felhasználói inputtól, így érdemes lehet új függvényt készítenünk a számára a <em>world</em> objektumunkon.</p>
+
+<p>Helyezzük tehát valahova a world objektumunkra ezt a függvényt</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> world <span class="pl-k">=</span> {
+    <span class="pl-c">// többi tulajdonság, és függvény...</span>
+
+    <span class="pl-c">// ...</span>
+
+<span class="pl-c">// Ez a függvény végigmegy az összes entitáson, és próbálja õket ütköztetni</span>
+    <span class="pl-en">checkCollisions</span>: <span class="pl-k">function</span> () {
+        <span class="pl-c">// Vegyük sorra az összes elemet</span>
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> world.<span class="pl-c1">entities</span>.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+            <span class="pl-c">// Majd minden elemhez vegyük sorra az utána következõket, így egy páros csak egyszer kerül vizsgálatra</span>
+            <span class="pl-k">for</span> (<span class="pl-k">var</span> j <span class="pl-k">=</span> i <span class="pl-k">+</span> <span class="pl-c1">1</span>; j <span class="pl-k">&lt;</span> world.<span class="pl-c1">entities</span>.<span class="pl-c1">length</span>; j<span class="pl-k">++</span>) {
+                <span class="pl-c">// Vegyük ki a páros elemeit 1-1 változóba</span>
+                <span class="pl-k">var</span> e1 <span class="pl-k">=</span> world.<span class="pl-c1">entities</span>[i];
+                <span class="pl-k">var</span> e2 <span class="pl-k">=</span> world.<span class="pl-c1">entities</span>[j];
+
+                <span class="pl-c">// Ha mindkét elem kezel metszést</span>
+                <span class="pl-k">if</span> (e1.intersects <span class="pl-k">&amp;&amp;</span> e2.intersects) {
+                    <span class="pl-c">// és ha az egyik elem metszi a másikat, és van ütközés kezelõ függvénye</span>
+                    <span class="pl-k">if</span> (e1.intersects(e2) <span class="pl-k">&amp;&amp;</span> e1.handleCollisionWith) {
+                        <span class="pl-c">// akkor hívjuk meg az ütközés kezelõ függvényét</span>
+                        e1.handleCollisionWith(e2);
+                    }
+                    <span class="pl-c">// ugyanez a másik irányban is</span>
+                    <span class="pl-k">if</span> (e2.intersects(e1) <span class="pl-k">&amp;&amp;</span> e2.handleCollisionWith) {
+                        e2.handleCollisionWith(e1);
+                    }
+                }
+            }
+        }
+    },
+
+    <span class="pl-c">/// stb.</span>
+};
+
+<span class="pl-c">// És ezt a gameLoop játékciklusunkban valahol hívjuk is meg, hogy végrehajtsuk minden körben:</span>
+<span class="pl-k">var</span> <span class="pl-en">gameLoop</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">t</span>) {
+    <span class="pl-c">// ... </span>
+
+    <span class="pl-c">// mondjuk az inputkezelés és a világ szimuláció közt ütközést detektálhatunk</span>
+    world.handleInputs(mouse, keyboard);
+    world.checkCollisions();
+    world.simulate(delta);
+    <span class="pl-c">// ...</span>
+};</pre></div>
+
+<p>Ezzel tehát minden körben párosával összevetjük és üzköztetjük a játékosunkat és az ágyúgolyókat, az eredményét pedig a konzolon láthatjuk (F12, ha eddig nem nézted volna). Akkor történik ütközés, ha két golyó metszi egymást, vagy ha visszapottyan egy golyó a tankunkra.</p>
+
+<p>Még egy apró dolgot megtehetünk itt, jó lenne lekorlátozni, hogy a tank csak balra és jobbra tudjon menni a földhöz közeli sávon. Ehhez TÖRÖLNI KELL a WS és a fel-le gombokat kezelõ sort, és a tankot a földhöz közeli helyre kell tenni a képernyõ közepe helyett.</p>
+
+<div class="highlight highlight-javascript"><pre> <span class="pl-c">// ez a sor felelõs a függõleges mozgatásért (handleInputs függvény eleje)</span>
+ <span class="pl-c">// töröljük tehát ki</span>
+ player.speed.<span class="pl-c1">y</span> <span class="pl-k">=</span> (keyboard[<span class="pl-c1">40</span>]<span class="pl-k">+</span>keyboard[<span class="pl-c1">83</span>] <span class="pl-k">-</span> keyboard[<span class="pl-c1">38</span>] <span class="pl-k">-</span> keyboard[<span class="pl-c1">87</span>])<span class="pl-k">*</span><span class="pl-c1">100</span>;
+
+ <span class="pl-c">// valamint a player objektum elkészítésekor más helyre inicializáljuk</span>
+ <span class="pl-k">var</span> player <span class="pl-k">=</span> {
+    <span class="pl-c">// tároljuk a játékos helyét (tegyük a földre)</span>
+    position<span class="pl-k">:</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(cWidth / <span class="pl-c1">2</span>, cHeight <span class="pl-k">-</span> <span class="pl-c1">12</span>),
+
+    <span class="pl-c">// a többi rész érintetlen marad...</span></pre></div>
+
+<p>A következõ lépésben egy nagyon jópofa és látványos dolgot fogunk megcsinálni, ami sokkal egyszerûbb, mint aminek tûnik: rugalmas ütközést a golyók közt.</p>
+
+<h2>
+<a id="user-content-12-játék-alapok---rugalmas-ütközés" class="anchor" href="#12-j%C3%A1t%C3%A9k-alapok---rugalmas-%C3%BCtk%C3%B6z%C3%A9s" aria-hidden="true"><span class="octicon octicon-link"></span></a>12. Játék alapok - Rugalmas ütközés</h2>
+
+<p>A rugalmas ütközés is egy olyan dolog, amit az emberi agy már nagyon természetesen kezel, és elõre becsül, ezért annyira jó látni a játékokban, és annyira rossz, ha nem úgy mûködik ahogy kellene neki.</p>
+
+<p>Az egész egy 2 dimenziós képleten alapszik, amit a <a href="http://en.wikipedia.org/wiki/Elastic_collision#Two-Dimensional_Collision_With_Two_Moving_Objects">rugalmas ütközés</a> ezen bekezdésének végén láthatunk. Az ott adott változók (x1,x2,v1,v2) vektorok, tehát a vektormûveleteket kell rájuk értelmeznünk. A &lt; &gt; jelekkel itt a skalárszorzatot jelzik, szóval már ugorhatunk is a Vector.js-hez, hogy kiterjesszük a skalárszorzat implementációval:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c1">Vector</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">scalar</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">other</span>){
+    <span class="pl-k">return</span> other.<span class="pl-c1">x</span> <span class="pl-k">*</span> <span class="pl-v">this</span>.<span class="pl-c1">x</span> <span class="pl-k">+</span> other.<span class="pl-c1">y</span> <span class="pl-k">*</span> <span class="pl-v">this</span>.<span class="pl-c1">y</span>;
+};</pre></div>
+
+<p>Ezután már tudjuk értelmezni a képletet, és nem is tûnik olyan nehéznek átírni javascript megfelelõre. </p>
+
+<p>A kérdés, hogy hol kell ezt alkalmaznunk? Mivel egyelõre nem szeretnénk, hogy a játékosunk rugalmasan ütközzön, csak a golyók egymás közt, így csak a Circle osztályt kell felokosítanunk. Az eddigi logolás helyett implementáljuk a képlettel adott rugalmas ütközést:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Próbáljunk meg rugalmas ütköztetést szimulálni</span>
+<span class="pl-c1">Circle</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">handleCollisionWith</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">other</span>) {
+    <span class="pl-c">// Csak a másik körrel való ütközés esetén</span>
+    <span class="pl-k">if</span> (other <span class="pl-k">instanceof</span> Circle) {
+        <span class="pl-c">// a képletben szereplõ változók</span>
+        <span class="pl-k">var</span> v1 <span class="pl-k">=</span> <span class="pl-v">this</span>.speed;
+        <span class="pl-k">var</span> x1 <span class="pl-k">=</span> <span class="pl-v">this</span>.position;
+        <span class="pl-k">var</span> m1 <span class="pl-k">=</span> <span class="pl-v">this</span>.mass;
+        <span class="pl-k">var</span> v2 <span class="pl-k">=</span> other.speed;
+        <span class="pl-k">var</span> x2 <span class="pl-k">=</span> other.position;
+        <span class="pl-k">var</span> m2 <span class="pl-k">=</span> other.mass;
+
+        <span class="pl-c">// egyszerûsítésként a képletben elõforduló vektorkülönbségek</span>
+        <span class="pl-k">var</span> x12Diff <span class="pl-k">=</span> x1.subtract(x2);
+        <span class="pl-k">var</span> x21Diff <span class="pl-k">=</span> x2.subtract(x1);
+
+        <span class="pl-c">// a képletek megoldása v1 és v2-re</span>
+        <span class="pl-k">var</span> v1New <span class="pl-k">=</span> v1.subtract(x12Diff.scale(<span class="pl-c1">2</span> <span class="pl-k">*</span> m2 / (m1 <span class="pl-k">+</span> m2) <span class="pl-k">*</span> v1.subtract(v2).scalar(x12Diff) / <span class="pl-c1">Math</span>.<span class="pl-c1">pow</span>(x12Diff.<span class="pl-c1">length</span>(), <span class="pl-c1">2</span>)));
+        <span class="pl-k">var</span> v2New <span class="pl-k">=</span> v2.subtract(x21Diff.scale(<span class="pl-c1">2</span> <span class="pl-k">*</span> m1 / (m1 <span class="pl-k">+</span> m2) <span class="pl-k">*</span> v2.subtract(v1).scalar(x21Diff) / <span class="pl-c1">Math</span>.<span class="pl-c1">pow</span>(x21Diff.<span class="pl-c1">length</span>(), <span class="pl-c1">2</span>)));
+
+        <span class="pl-c">// a kiszámolt értékek lesznek az új sebességei az ütközõ entitásoknak</span>
+        <span class="pl-v">this</span>.speed <span class="pl-k">=</span> v1New;
+        other.speed <span class="pl-k">=</span> v2New;
+    }
+};</pre></div>
+
+<p>Mivel látható, hogy egy objektum ütközésválaszában lekezeljük a teljes rugalmas ütközést, és beállítjuk mindkét fél sebességét, így sejthetõ, hogy hibához vezetne, ha engednénk mindkét félnek külön-külön meghívni ezt a függvényt ütközéskor, mert akkor 2x történne meg minden, tehát a 2 ütközés 2 sebességcserét eredményezne, ami úgy nézne ki, mintha semmi sem történt volna.</p>
+
+<p>Ennek orvoslására két dolgot tehetünk:</p>
+
+<ul>
+<li>az ütközéskezelõ függvényben NEM állítjuk be a másik objektum sebességét, és így végrehajthatjuk a vissza irányú ütköztetést is</li>
+<li>az ütköztetés során mindig csak egy irányban, egyszer ütköztetünk minden párosra</li>
+</ul>
+
+<p>Ha kipróbálnánk az elsõ megoldást, ami programozási szempontból ésszerûbbnek tûnik, hiszen miért törõdne az egyik objektum a másikkal mikor ütközik, akkor láthatnánk, hogy mivel a képlet az ütközés pillanatában számítandó mindkét entitás sebességére, azzal, hogy egymás után számítjuk ki a képlet eredményét, rossz viselkedést kapunk. Mire a második ütköztetés jön, addigra az elsõ objektum már sebességet változtatott, tehát a második ütközésnek rossz lesz az inputja.</p>
+
+<p>Tehát maradjunk a második megoldásnál: az ütközés kezelés maradjon ahogy most van, egy függvényhívás beállítja mindkét fél sebességét. Azonban töröljük ki azt a részt, amely mindkét irányban ütközteti a vizsgált entitáspárokat: (<em>gameScript.js</em> <em>world.checkCollisions</em> függvény)</p>
+
+<div class="highlight highlight-javascript"><pre>    <span class="pl-c">// Ha mindkét elem kezel metszést</span>
+    <span class="pl-k">if</span> (e1.intersects <span class="pl-k">&amp;&amp;</span> e2.intersects) {
+        <span class="pl-c">// és ha az egyik elem metszi a másikat, és van ütközés kezelõ függvénye</span>
+        <span class="pl-k">if</span> (e1.intersects(e2) <span class="pl-k">&amp;&amp;</span> e1.handleCollisionWith) {
+            <span class="pl-c">// akkor hívjuk meg az ütközés kezelõ függvényét</span>
+            e1.handleCollisionWith(e2);
+        }
+        <span class="pl-c">// Ezt kell kitörölni --&gt;</span>
+        <span class="pl-c">/*</span>
+<span class="pl-c">        if (e2.intersects(e1) &amp;&amp; e2.handleCollisionWith) {</span>
+<span class="pl-c">            e2.handleCollisionWith(e1);</span>
+<span class="pl-c">        }</span>
+<span class="pl-c">        */</span>
+    }</pre></div>
+
+<p>Ezzel megoldottuk, hogy csak egy irányban történik az ütközés, és mivel csak a kör osztályunkra írtuk meg, így az eredményt akkor látjuk, ha két golyót egymásnak lövünk. Célózzunk tehát az ég felé, és próbáljuk meg eltalálni a zuhanó ágyúgolyóinkat. </p>
+
+<p>Kozmetikai jelleggel megoldható, hogy az ágyúgolyók ne mindig egyszínûek legyenek, és jobban érzékeljük az ütközésüket. Ezért generálhatunk véletlen színt minden új kilõtt golyónak. </p>
+
+<p>Ezt természetesen a <em>gameScript.js</em>-ben tehetjük meg, azon a részen, ahol a kattintást kezeljük, és ennek hatására robbanást generálunk. A megváltoztatandó kódsort a következõ részletben kommenttel jelölöm:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">/// ... world.handleInputs függvényében</span>
+<span class="pl-k">if</span> (mouse.<span class="pl-c1">left</span>) {
+            <span class="pl-k">var</span> explosion <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Explosion</span>({
+                particles<span class="pl-k">:</span> [<span class="pl-k">new</span> <span class="pl-en">Circle</span>(<span class="pl-c1">0</span>, <span class="pl-c1">0</span>, {
+                    size<span class="pl-k">:</span> <span class="pl-c1">10</span>,
+                    <span class="pl-c">// A color: ... sort változtassuk meg erre, hogy véletlenszerûen generáljunk új színeket</span>
+                    color<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>hsl(<span class="pl-pds">"</span></span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">floor</span>(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()<span class="pl-k">*</span><span class="pl-c1">360</span>) <span class="pl-k">+</span> <span class="pl-s"><span class="pl-pds">"</span>,100%,50%)<span class="pl-pds">"</span></span>,
+                    friction<span class="pl-k">:</span> <span class="pl-c1">0.005</span>,
+                    world<span class="pl-k">:</span> world,
+                    mass<span class="pl-k">:</span> <span class="pl-c1">2</span>,
+                    speed<span class="pl-k">:</span> playerToMouseVector.clone().normalize().scaleInPlace(<span class="pl-c1">700</span>),
+                    life<span class="pl-k">:</span> <span class="pl-c1">10000</span>
+                })],</pre></div>
+
+<h2>
+<a id="user-content-13-rendszerezés-refaktorálás" class="anchor" href="#13-rendszerez%C3%A9s-refaktor%C3%A1l%C3%A1s" aria-hidden="true"><span class="octicon octicon-link"></span></a>13. Rendszerezés, refaktorálás</h2>
+
+<p>Ebben a lépésben nem fogunk új képességet vinni a játékba, hanem inkább megpróbáljuk a kódot egy kicsit rendbetenni, mielõtt az utolsó felvonást elkezdjük. A refaktorálás általában kód újraszervezést jelent, a mi esetünkben most ez csak annyit jelent, hogy a játékos és világ objektumainkból olyan osztályokat csinálunk, amelyekkel számos játékost, vagy világot tudnánk generálni. Még ha csak 1-1 darabot is akarunk készíteni belõlük, érdemes osztályokba szervezni õket, hogy ne egy fájlt szennyezzünk tele a nem igazán releváns kódrészletekkel. Így tehát kivonunk egy csomó kódot a <em>gameScript.js</em>-bõl, és létrehozzuk a <em>Player.js</em>-t, és a <em>World.js</em>-t, és közben megtanulunk egy másik módszert az osztályok szimulálására.</p>
+
+<p>Kezdjük a World osztállyal, hozzuk létre a World.js-t, hivatkozzuk be az <em>index.html</em>-ben, és másoljuk át bele a <em>gameScript.js</em>-ben lévõ <em>world</em> változónkat, majd alakítsuk osztállyá.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Legyen a World függvény a konstruktor</span>
+<span class="pl-k">var</span> <span class="pl-en">World</span> <span class="pl-k">=</span> <span class="pl-k">function</span> () {
+    <span class="pl-c">// A tulajdonságokat a this objektumra tehetjük</span>
+    <span class="pl-v">this</span>.gravity <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(<span class="pl-c1">0</span>, <span class="pl-c1">200</span>);
+    <span class="pl-v">this</span>.<span class="pl-c1">entities</span> <span class="pl-k">=</span> [];
+    <span class="pl-v">this</span>.drawables <span class="pl-k">=</span> [];
+    <span class="pl-v">this</span>.animatables <span class="pl-k">=</span> [];
+
+    <span class="pl-c">// A függvényeket is rátehetjük a this objektumra, így elérhetõk lesznek a World példányokon</span>
+    <span class="pl-c1">this</span>.<span class="pl-en">insert</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">entity</span>, <span class="pl-smi">asDrawable</span>, <span class="pl-smi">asAnimatable</span>) {
+        <span class="pl-c">// A kódban a world elõfordulásokat this-re cserélhetjük, a this jelenti az éppen elkészülõ objektumot</span>
+        entity.world <span class="pl-k">=</span> <span class="pl-v">this</span>;
+        <span class="pl-v">this</span>.<span class="pl-c1">entities</span>.<span class="pl-c1">push</span>(entity);
+        <span class="pl-k">if</span> (asDrawable) {
+            <span class="pl-v">this</span>.drawables.<span class="pl-c1">push</span>(entity);
+        }
+        <span class="pl-k">if</span> (asAnimatable) {
+            <span class="pl-v">this</span>.animatables.<span class="pl-c1">push</span>(entity);
+        }
+    };
+
+    <span class="pl-c1">this</span>.<span class="pl-en">remove</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">entity</span>) {
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.<span class="pl-c1">entities</span>.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+            <span class="pl-k">if</span> (<span class="pl-v">this</span>.<span class="pl-c1">entities</span>[i] <span class="pl-k">==</span> entity) {
+                <span class="pl-v">this</span>.<span class="pl-c1">entities</span>.<span class="pl-c1">splice</span>(i, <span class="pl-c1">1</span>);
+                <span class="pl-k">break</span>;
+            }
+        }
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.drawables.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+            <span class="pl-k">if</span> (<span class="pl-v">this</span>.drawables[i] <span class="pl-k">==</span> entity) {
+                <span class="pl-v">this</span>.drawables.<span class="pl-c1">splice</span>(i, <span class="pl-c1">1</span>);
+                <span class="pl-k">break</span>;
+            }
+        }
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.animatables.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+            <span class="pl-k">if</span> (<span class="pl-v">this</span>.animatables[i] <span class="pl-k">==</span> entity) {
+                <span class="pl-v">this</span>.animatables.<span class="pl-c1">splice</span>(i, <span class="pl-c1">1</span>);
+                <span class="pl-k">break</span>;
+            }
+        }
+    };
+
+    <span class="pl-c1">this</span>.<span class="pl-en">draw</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">ctx</span>) {
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.drawables.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+            <span class="pl-k">var</span> drawable <span class="pl-k">=</span> <span class="pl-v">this</span>.drawables[i];
+            drawable.drawTo(ctx);
+        }
+    };
+
+    <span class="pl-c1">this</span>.<span class="pl-en">simulate</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">time</span>) {
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.animatables.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+            <span class="pl-k">var</span> animatable <span class="pl-k">=</span> <span class="pl-v">this</span>.animatables[i];
+            animatable.animate(time);
+        }
+    };
+
+    <span class="pl-c1">this</span>.<span class="pl-en">checkCollisions</span> <span class="pl-k">=</span> <span class="pl-k">function</span> () {
+
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.<span class="pl-c1">entities</span>.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+            <span class="pl-k">for</span> (<span class="pl-k">var</span> j <span class="pl-k">=</span> i <span class="pl-k">+</span> <span class="pl-c1">1</span>; j <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.<span class="pl-c1">entities</span>.<span class="pl-c1">length</span>; j<span class="pl-k">++</span>) {
+                <span class="pl-k">var</span> e1 <span class="pl-k">=</span> <span class="pl-v">this</span>.<span class="pl-c1">entities</span>[i];
+                <span class="pl-k">var</span> e2 <span class="pl-k">=</span> <span class="pl-v">this</span>.<span class="pl-c1">entities</span>[j];
+
+                <span class="pl-k">if</span> (e1.intersects <span class="pl-k">&amp;&amp;</span> e2.intersects) {
+                    <span class="pl-k">if</span> (e1.intersects(e2) <span class="pl-k">&amp;&amp;</span> e1.handleCollisionWith) {
+                        e1.handleCollisionWith(e2);
+                    }
+                }
+            }
+        }
+    };
+
+    <span class="pl-c">// mire idáig eljutunk, a kezdetben üres this objektum már rendelkezik minden olyan tulajdonsággal és függvénnyel, ami ahhoz kell, hogy worldként viselkedjen.</span>
+    <span class="pl-c">// Így is lehet osztályokat szimulálni. a konstruktorfüggvényben a this-re aggatunk rá minden tulajdonságot és függvényt.</span>
+};</pre></div>
+
+<p>Láthattuk, hogy egy objektum kulcsai helyett a <em>this</em> objektumot kezeltük úgy, mint az éppen készítendõ <em>World</em> példányt, és rajta állítottunk be tulajdonságokat és függvényeket.</p>
+
+<p>Ennek mintájára megcsinálhatjuk a játékos osztályt, a <em>Player.js</em> fájlba:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// A játékos osztályunk is hasonló az összes többihez, egy-az-egyben az objektumpéldányt alakíthatjuk át osztállyá.</span>
+<span class="pl-k">var</span> <span class="pl-en">Player</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">options</span>) {
+    <span class="pl-c">// A tulajdonságokat ráaggatjuk a this objektumra, aki az elkészítendõ példányt jelenti</span>
+    <span class="pl-v">this</span>.position <span class="pl-k">=</span> options.position <span class="pl-k">||</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>();
+    <span class="pl-v">this</span>.speed <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>();
+    <span class="pl-v">this</span>.cannonVector <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>();
+    <span class="pl-v">this</span>.<span class="pl-c1">color</span> <span class="pl-k">=</span> options.<span class="pl-c1">color</span> <span class="pl-k">||</span> <span class="pl-s"><span class="pl-pds">"</span>blueviolet<span class="pl-pds">"</span></span>;
+
+    <span class="pl-c">// A függvényeket a this-re is rátehetjük, hiszen akkor is megjelenik a játékoson</span>
+    <span class="pl-c1">this</span>.<span class="pl-en">drawTo</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">ctx</span>) {
+        ctx.fillStyle <span class="pl-k">=</span> <span class="pl-v">this</span>.<span class="pl-c1">color</span>;
+
+        ctx.beginPath();
+        ctx.arc(<span class="pl-v">this</span>.position.<span class="pl-c1">x</span>, <span class="pl-v">this</span>.position.<span class="pl-c1">y</span>, <span class="pl-c1">6</span>, <span class="pl-c1">0</span>, <span class="pl-c1">Math</span>.<span class="pl-c1">PI</span> <span class="pl-k">*</span> <span class="pl-c1">2</span>);
+        ctx.fill();
+
+        ctx.fillRect(<span class="pl-v">this</span>.position.<span class="pl-c1">x</span> <span class="pl-k">-</span> <span class="pl-c1">12</span>, <span class="pl-v">this</span>.position.<span class="pl-c1">y</span> <span class="pl-k">+</span> <span class="pl-c1">6</span> <span class="pl-k">-</span> <span class="pl-c1">4</span>, <span class="pl-c1">24</span>, <span class="pl-c1">8</span>);
+
+        ctx.beginPath();
+
+        ctx.<span class="pl-c1">moveTo</span>(<span class="pl-v">this</span>.position.<span class="pl-c1">x</span>, <span class="pl-v">this</span>.position.<span class="pl-c1">y</span>);
+
+        ctx.lineTo(<span class="pl-v">this</span>.position.<span class="pl-c1">x</span> <span class="pl-k">+</span> <span class="pl-v">this</span>.cannonVector.<span class="pl-c1">x</span>, <span class="pl-v">this</span>.position.<span class="pl-c1">y</span> <span class="pl-k">+</span> <span class="pl-v">this</span>.cannonVector.<span class="pl-c1">y</span>);
+        ctx.stroke();
+    };
+
+    <span class="pl-c1">this</span>.<span class="pl-en">animate</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">time</span>) {
+        <span class="pl-v">this</span>.position.addInPlace(<span class="pl-v">this</span>.speed.scale(time / <span class="pl-c1">1000</span>));
+    };
+
+    <span class="pl-c1">this</span>.<span class="pl-en">intersects</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">other</span>) {
+        <span class="pl-k">var</span> playersBoundingCircleRadius <span class="pl-k">=</span> <span class="pl-c1">8</span>;
+
+        <span class="pl-k">if</span> (other <span class="pl-k">instanceof</span> Square) {
+            <span class="pl-k">var</span> boundingCircleRadius <span class="pl-k">=</span> <span class="pl-c1">Math</span>.<span class="pl-c1">sqrt</span>(<span class="pl-c1">2</span>) <span class="pl-k">*</span> other.<span class="pl-c1">size</span> / <span class="pl-c1">2</span>;
+        } <span class="pl-k">else</span> <span class="pl-k">if</span> (other <span class="pl-k">instanceof</span> Circle) {
+            <span class="pl-k">var</span> boundingCircleRadius <span class="pl-k">=</span> other.<span class="pl-c1">size</span>;
+        }
+        <span class="pl-k">var</span> distance <span class="pl-k">=</span> other.position.subtract(<span class="pl-v">this</span>.position).<span class="pl-c1">length</span>();
+        <span class="pl-k">if</span> (distance <span class="pl-k">&lt;</span> (playersBoundingCircleRadius <span class="pl-k">+</span> boundingCircleRadius)) {
+            <span class="pl-k">return</span> <span class="pl-c1">true</span>;
+        } <span class="pl-k">else</span> {
+            <span class="pl-k">return</span> <span class="pl-c1">false</span>;
+        }
+    };
+
+    <span class="pl-c1">this</span>.<span class="pl-en">handleCollisionWith</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">other</span>) {
+        <span class="pl-k">if</span> (other <span class="pl-k">instanceof</span> Circle) {
+            <span class="pl-k">if</span> (other.speed.<span class="pl-c1">y</span> <span class="pl-k">&gt;</span> <span class="pl-c1">0</span>) {
+                <span class="pl-c">// Játékossal való ütközés, akár halál is lehetne :)</span>
+            }
+        }
+    };
+
+    <span class="pl-c">// Ha csinálunk egy egyszerû változót, az nem kerül rá a player példányokra, szóval a kívülrõl elérni nem kívánt tuljadonságokat így elrejthetjük.</span>
+    <span class="pl-k">var</span> fireColors <span class="pl-k">=</span> [<span class="pl-s"><span class="pl-pds">'</span>#FFFF47<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>#FFBC42<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>#FF5A1D<span class="pl-pds">'</span></span>];
+
+    <span class="pl-c1">this</span>.<span class="pl-en">handleInputs</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">mouse</span>, <span class="pl-smi">keyboard</span>) {
+        <span class="pl-k">var</span> mousePos <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(mouse.<span class="pl-c1">x</span>, mouse.<span class="pl-c1">y</span>);
+
+        <span class="pl-v">this</span>.speed.<span class="pl-c1">x</span> <span class="pl-k">=</span> (keyboard[<span class="pl-c1">39</span>] <span class="pl-k">+</span> keyboard[<span class="pl-c1">68</span>] <span class="pl-k">-</span> keyboard[<span class="pl-c1">37</span>] <span class="pl-k">-</span> keyboard[<span class="pl-c1">65</span>]) <span class="pl-k">*</span> <span class="pl-c1">100</span>;
+        <span class="pl-v">this</span>.cannonVector <span class="pl-k">=</span> mousePos.subtract(<span class="pl-v">this</span>.position).normalize().scaleInPlace(<span class="pl-c1">15</span>);
+
+        <span class="pl-k">var</span> cannonEnd <span class="pl-k">=</span> <span class="pl-v">this</span>.position.<span class="pl-c1">add</span>(<span class="pl-v">this</span>.cannonVector);
+        <span class="pl-k">var</span> playerToMouseVector <span class="pl-k">=</span> mousePos.subtract(<span class="pl-v">this</span>.position);
+
+        <span class="pl-k">var</span> _world <span class="pl-k">=</span> <span class="pl-v">this</span>.world;
+
+        <span class="pl-k">if</span> (mouse.<span class="pl-c1">left</span>) {
+            <span class="pl-k">var</span> explosion <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Explosion</span>({
+                particles<span class="pl-k">:</span> [<span class="pl-k">new</span> <span class="pl-en">Circle</span>(<span class="pl-c1">0</span>, <span class="pl-c1">0</span>, {
+                    size<span class="pl-k">:</span> <span class="pl-c1">10</span>,
+                    color<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>hsl(<span class="pl-pds">"</span></span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">floor</span>(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">360</span>) <span class="pl-k">+</span> <span class="pl-s"><span class="pl-pds">"</span>,90%,40%)<span class="pl-pds">"</span></span>,
+                    friction<span class="pl-k">:</span> <span class="pl-c1">0.005</span>,
+                    world<span class="pl-k">:</span> _world,
+                    mass<span class="pl-k">:</span> <span class="pl-c1">2</span>,
+                    speed<span class="pl-k">:</span> playerToMouseVector.clone().normalize().scaleInPlace(<span class="pl-c1">700</span>),
+                    life<span class="pl-k">:</span> <span class="pl-c1">10000</span>
+                })],
+                <span class="pl-en">generator</span>: <span class="pl-k">function</span> () {
+                    <span class="pl-k">return</span> <span class="pl-k">new</span> <span class="pl-en">Square</span>(<span class="pl-c1">0</span>, <span class="pl-c1">0</span>, {
+                        size<span class="pl-k">:</span> <span class="pl-c1">3</span>,
+                        color<span class="pl-k">:</span> fireColors[<span class="pl-c1">Math</span>.<span class="pl-c1">floor</span>(<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">3</span>)],
+                        friction<span class="pl-k">:</span> <span class="pl-c1">0.05</span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">0.001</span>,
+                        world<span class="pl-k">:</span> _world,
+                        mass<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>(),
+                        life<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">200</span> <span class="pl-k">+</span> <span class="pl-c1">800</span>
+                    });
+                },
+                world<span class="pl-k">:</span> _world,
+                particlesCount<span class="pl-k">:</span> <span class="pl-c1">10</span>,
+                strengthMin<span class="pl-k">:</span> <span class="pl-c1">100</span>,
+                strengthMax<span class="pl-k">:</span> <span class="pl-c1">400</span>,
+                coneWidth<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">PI</span> / <span class="pl-c1">8</span>,
+                coneOffset<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">atan2</span>(<span class="pl-k">-</span>playerToMouseVector.<span class="pl-c1">y</span>, playerToMouseVector.<span class="pl-c1">x</span>)
+            });
+
+            explosion.fire(cannonEnd);
+            mouse.<span class="pl-c1">left</span> <span class="pl-k">=</span> <span class="pl-c1">0</span>;
+        }
+    };
+};</pre></div>
+
+<p>Mivel már van egy olyan osztályunk, amivel világokat tudunk példányosítani, és egy olyan is, amivel játékosokat, a <em>gameScript.js</em>-ben leegyszerûsíthetjük ezeket a részeket. Tehát ott ahol a world és a player változókat elkészítjük:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> world <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">World</span>();
+<span class="pl-k">var</span> player <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Player</span>({
+    position<span class="pl-k">:</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(cWidth/<span class="pl-c1">2</span>, cHeight<span class="pl-k">-</span><span class="pl-c1">12</span>),
+    color<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>#71c<span class="pl-pds">"</span></span>
+});
+world.insert(player, <span class="pl-c1">true</span>, <span class="pl-c1">true</span>);</pre></div>
+
+<p>Ugye mennyivel szebb és átláthatóbb? Nyilván nagyon sok nem-triviális részletet rejtettünk el a <em>World</em> és <em>Player</em> osztályokban, de azoknak igazából ott is a helyük, és nem a játék magasabb absztrakciós szintû nézetével egy helyen.</p>
+
+<p>Ha mindent jól csináltunk, a játékunk ugyanúgy fut ahogy eddig, annyi változott csak, hogy a <em>world</em> és a <em>player</em> példányaink példányosítással készülnek objektum literálok helyett, és másik fájlokban tároljuk az osztályok definícióját.</p>
+
+<h2>
+<a id="user-content-14-játék-logika---ellenségek" class="anchor" href="#14-j%C3%A1t%C3%A9k-logika---ellens%C3%A9gek" aria-hidden="true"><span class="octicon octicon-link"></span></a>14. Játék logika - Ellenségek</h2>
+
+<p>Rövid szusszanás után egy utolsó nagy lépésben értelmet adunk eddigi fáradozásainknak azzal, hogy célpontokat és pontozást teszünk a játékba.</p>
+
+<p>Ha mindent jól csináltunk eddig, akkor a játékunkban egy mozgatható kis tank játékos van, aki golyókat tud lövöldözni. Ennek még célja nincs. Ezért behozunk ellenségeket, akiket lõni lehet, és ezzel pontot gyûjteni.</p>
+
+<p>Készítsük el elõször az ellenségeket reprezentáló osztályt. Mivel azt szeretnénk, hogy a játékban a látvány javítása céljából az ellenségek is ütközzenek az ágyúgolyókkal, ezért átmásolhatnánk a rugalmas ütközés logikáját kézzel az Enemy osztályunk megfelelõ részére, és felkészítenénk mindkét kódot arra, hogy egymással tudjanak ütközni. Ugyanakkor, a példa kedvéért itt megmutatom nektek hogy hogyan lehet a javascriptben szimulálni az objektumorientált világ öröklés koncepcióját. </p>
+
+<p>Amikor egy osztály örököl egy másikból, az azt jelenti, hogy az õsosztály példányának minden tulajdonsága megjelenik a leszármazott példányában. És a leszármazott osztály még új dolgokkal is ki tudja terjeszteni a saját példányát az õsön túl. Mivel javascriptben nincs klasszikus öröklés, csak prototípusok, így ezt kicsivel nehezebb megoldani.</p>
+
+<p>A logika amit itt alkalmazunk két lépésbõl áll:
+ 1 amikor a leszármazott objektumot konstruáljuk, akkor hívjuk meg a leszármazottra az õs konstruktorát is, hogy az be tudja állítani a saját magának megfelelõ tulajdonságokat a konstruktor paraméterben kapott értékekbõl
+ 2 a leszármazott osztály (függvény) prototípusának állítsuk be az õsosztály 1 db példányát, így minden rajta definiált függvény megjelenik az összes leszármazott példányon.</p>
+
+<p><em>Megjegyzés: ha a World és Player osztályoknál használt osztály szimulációs módszert használnánk (amikor nem a prototípus objektumon állítunk be függvényeket, hanem a konstruktorban készítünk függvény példányokat), akkor a második lépés itt felesleges lett volna, hiszen amikor az õskonstruktort meghívjuk, az elkészíti az összes függvényét a leszármazott példányán is.</em></p>
+
+<p>Ez a sok bonyolult zagyva után lássuk a kódot:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-k">var</span> <span class="pl-en">Enemy</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">x</span>, <span class="pl-smi">y</span>, <span class="pl-smi">options</span>) {
+    <span class="pl-c">// Ez az elsõ említett lépés: az õs konstruktorát meghívjuk az éppen készülõ Enemy példányon, a this-en</span>
+    Circle.<span class="pl-c1">apply</span>(<span class="pl-v">this</span>, arguments);
+
+    <span class="pl-c">// Ezek után további, csak az Enemy-re jellmzõ tulajdonságokat beállíthatunk a példányon:</span>
+
+    <span class="pl-c">// Saját kép paraméterei, ami alapján kirajzolásra kerül az ellenség képe</span>
+    <span class="pl-v">this</span>.planeCoords <span class="pl-k">=</span> <span class="pl-v">this</span>.planes[options.planeId <span class="pl-k">||</span> <span class="pl-c1">0</span>];
+    <span class="pl-c">// a this.planes[] tömb majd a prototípusra kerül rá, így minden példány látni fogja, és a választható repülõgép kép koordinátákat tartalmazza</span>
+    <span class="pl-v">this</span>.planeId <span class="pl-k">=</span> options.planeId;
+    <span class="pl-v">this</span>.currentPointValue <span class="pl-k">=</span> <span class="pl-c1">1</span>;
+};
+
+<span class="pl-c">// És készítsünk el egy példányt a Circle-bõl, ez a második említett lépés</span>
+<span class="pl-c1">Enemy</span>.<span class="pl-c1">prototype</span> <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Circle</span>();</pre></div>
+
+<p>Ezzel tehát logikailag leszármaztunk a Circle osztályból. Amikor létrehozunk egy új Enemy példányt, akkor az tökéletesen úgy fog kinézni, és viselkedni, mint egy Circle példány, mint egy ágyúgolyó például. Ezért írjuk felül az Enemy prototípusán néhány függvényt, pl. a kirajzolást és az ütközésválaszt (így tehát az animálást és az ütközésdetektálást nem kell újraírnunk, de az öröklés miatt elérhetõk).</p>
+
+<p>Elõször a kirajzolást írjuk folytatva az Enemy osztályt:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Azzal, hogy az elkészült prototípuson felülírunk egy függvényt, gyakorlatilag felülírjuk a kirajzolást </span>
+<span class="pl-c">// minden leendõ Enemy példányon, ami tulajdonképpen a célunk, hiszen az ellenségeket másképp szeretnénk kirajzolni</span>
+<span class="pl-c1">Enemy</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">drawTo</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">ctx</span>) {
+    <span class="pl-c">// Használjuk a kontextuson adott .drawImage függvényt</span>
+    <span class="pl-c">// paraméterezése:</span>
+    <span class="pl-c">// mit, honnanX, honnanY, honnanSzél, honnanMag, hovaX, hovaY, hovaSzél, hovaMag</span>
+    ctx.drawImage(<span class="pl-v">this</span>.image,
+        <span class="pl-v">this</span>.planeCoords.<span class="pl-c1">x</span>, <span class="pl-v">this</span>.planeCoords.<span class="pl-c1">y</span>, <span class="pl-v">this</span>.planeCoords.<span class="pl-c1">width</span>, <span class="pl-v">this</span>.planeCoords.<span class="pl-c1">height</span>,
+        <span class="pl-v">this</span>.position.<span class="pl-c1">x</span> <span class="pl-k">-</span> <span class="pl-v">this</span>.<span class="pl-c1">size</span> / <span class="pl-c1">2</span>, <span class="pl-v">this</span>.position.<span class="pl-c1">y</span> <span class="pl-k">-</span> <span class="pl-v">this</span>.<span class="pl-c1">size</span> / <span class="pl-c1">2</span>, <span class="pl-v">this</span>.<span class="pl-c1">size</span>, <span class="pl-v">this</span>.<span class="pl-c1">size</span>);
+};</pre></div>
+
+<p>Ha felül akarunk írni egy õsbõl örökölt függvényt, akkor az eltûnik teljesen. A mi esetünkben az ütközés választ nem szimplán felül akarjuk írni, hanem kiterjeszteni akarjuk, tehát az eredeti rugalmas ütközésen kívül szeretnénk szikrákat szórni egy <em>Explosion</em> segítségével.
+Ehhez azt tehetjük, hogy elmentjük az eredeti ütközésválaszt, valamilyen más néven, majd az ütközésválaszt felülírjuk, és a kiterjesztés során valahol meghívjuk az eredeti, elmentett függvényt is. Ezzel megtörténik az eredeti rugalmas ütközés, és az is, amit mi szeretnénk hozzátenni az ellenség osztályban:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Elmentjük az örökölt függvényt</span>
+<span class="pl-c1">Enemy</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">parentCollide</span> <span class="pl-k">=</span> Enemy.<span class="pl-c1">prototype</span>.handleCollisionWith;
+<span class="pl-c">// Felülírjuk az örökölt függvényt</span>
+<span class="pl-c1">Enemy</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">handleCollisionWith</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">other</span>) {
+    <span class="pl-k">if</span> (other <span class="pl-k">instanceof</span> Enemy <span class="pl-k">||</span> other <span class="pl-k">instanceof</span> Square) <span class="pl-k">return</span>;
+
+    <span class="pl-c">// Ütközés után beszínezzük másfélére a repülõt, úgy hogy másik képet használunk</span>
+    <span class="pl-v">this</span>.planeCoords <span class="pl-k">=</span> <span class="pl-v">this</span>.planes[<span class="pl-v">this</span>.planeId <span class="pl-k">+</span> <span class="pl-c1">2</span>];
+    <span class="pl-c">// Gyorsulását lenullázzuk, amivel zuhanásba kezd a gravitáció miatt</span>
+    <span class="pl-v">this</span>.acceleration.scaleInPlace(<span class="pl-c1">0</span>);
+
+    <span class="pl-c">// Készítünk egy formás robbanást</span>
+    <span class="pl-k">var</span> enemy <span class="pl-k">=</span> <span class="pl-v">this</span>;
+    <span class="pl-k">var</span> expl <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Explosion</span>({
+        <span class="pl-en">generator</span>: <span class="pl-k">function</span> () {
+            <span class="pl-k">return</span> <span class="pl-k">new</span> <span class="pl-en">Square</span>(<span class="pl-c1">0</span>, <span class="pl-c1">0</span>, {
+                size<span class="pl-k">:</span> <span class="pl-c1">5</span>,
+                color<span class="pl-k">:</span> <span class="pl-s"><span class="pl-pds">"</span>rgb(2<span class="pl-pds">"</span></span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">floor</span>(<span class="pl-c1">55</span> <span class="pl-k">*</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>()) <span class="pl-k">+</span> <span class="pl-s"><span class="pl-pds">"</span>,30,50)<span class="pl-pds">"</span></span>,
+                friction<span class="pl-k">:</span> <span class="pl-c1">0.05</span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">0.001</span>,
+                world<span class="pl-k">:</span> enemy.world,
+                mass<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>(),
+                life<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">200</span> <span class="pl-k">+</span> <span class="pl-c1">800</span>
+            });
+        },
+        world<span class="pl-k">:</span> enemy.world,
+        particlesCount<span class="pl-k">:</span> <span class="pl-c1">20</span>,
+        strengthMin<span class="pl-k">:</span> <span class="pl-c1">100</span>,
+        strengthMax<span class="pl-k">:</span> <span class="pl-c1">400</span>,
+        coneWidth<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">PI</span> / <span class="pl-c1">4</span>,
+        coneOffset<span class="pl-k">:</span> <span class="pl-c1">Math</span>.<span class="pl-c1">atan2</span>(<span class="pl-k">-</span>other.speed.<span class="pl-c1">y</span>, other.speed.<span class="pl-c1">x</span>)
+    });
+    <span class="pl-c">// és azt elsütjük a repülõ helyén</span>
+    expl.fire(<span class="pl-v">this</span>.position);
+
+    <span class="pl-c">// Majd meghívjuk az eredeti ütközésválasz függvényt, ami rugalmasan ütközteti a két testet.</span>
+    <span class="pl-v">this</span>.parentCollide(other);
+
+    <span class="pl-c">// A repülõnek lecsökkentjük a tömegét, hogy ne zuhanjon túl gyorsan</span>
+    <span class="pl-v">this</span>.mass <span class="pl-k">=</span> other.mass;
+
+    <span class="pl-c">// A világ referenciánkon jelezzük, hogy pontot ér a találat</span>
+    <span class="pl-v">this</span>.world.yieldPoints(<span class="pl-v">this</span>.currentPointValue);
+    <span class="pl-c">// És növeljük a pontértéket, hogy a zuhanó repülõ többet érjen</span>
+    <span class="pl-v">this</span>.currentPointValue <span class="pl-k">*=</span> <span class="pl-c1">2</span>;
+    <span class="pl-c">// De max 16-ot</span>
+    <span class="pl-k">if</span> (<span class="pl-v">this</span>.currentPointValue <span class="pl-k">&gt;</span> <span class="pl-c1">16</span>) <span class="pl-v">this</span>.currentPointValue <span class="pl-k">=</span> <span class="pl-c1">0</span>;
+};</pre></div>
+
+<p>Ezzel elméletileg megvagyunk az ellenség osztálynak a logikai részével. Már csak a vizuális részén kell javítanunk valamennyit. Ehhez be kell töltenünk egy <em>img</em> tagbe egy képet, hogy használhassuk rajzolás alapjául, és elmentjük az Enemy osztály prototípusára a képet és a képen lévõ objektumok logikai helyét.
+<em>Megjegyzés: a képen lévõ koordinátákat és szélességeket kézzel mértem ki, és az alapján állítottam össze a tömböt ami tárolja ezeket</em></p>
+
+<p>Folytassuk tehát ezzel az <em>Enemy.js</em>-t:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Mivel ez az osztály behúzásakor lefutó javascript kód, ezért lehetõségünk van bármit csinálni. Például behúzhatunk egy kép fájlt</span>
+<span class="pl-c">// amibõl késõbb ki tudunk másolni sprite-okat a képernyõre. Mivel az ellenségek vannak ezen a képen, ezért itt behúzhatjuk.</span>
+
+<span class="pl-c">// Készítsünk egy üres IMG taget</span>
+<span class="pl-k">var</span> atlas <span class="pl-k">=</span> <span class="pl-c1">document</span>.<span class="pl-c1">createElement</span>(<span class="pl-s"><span class="pl-pds">"</span>img<span class="pl-pds">"</span></span>);
+<span class="pl-c">// az atlaszunk onload függvénye AKKOR hívódik meg, ha a kép sikeresen betöltõdött</span>
+<span class="pl-c1">atlas</span>.<span class="pl-en">onload</span> <span class="pl-k">=</span> <span class="pl-k">function</span> () {
+    <span class="pl-c">// Ekkor tároljuk le az ellenség prototípusán a referenciát a képre</span>
+    <span class="pl-c1">Enemy</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">image</span> <span class="pl-k">=</span> atlas;
+    <span class="pl-c">// És az objektumot, ami tárolja a képek részleteinek koordinátáit</span>
+    <span class="pl-c1">Enemy</span>.<span class="pl-c1">prototype</span>.<span class="pl-en">planes</span> <span class="pl-k">=</span> [
+        {
+            x<span class="pl-k">:</span> <span class="pl-c1">0</span>,
+            y<span class="pl-k">:</span> <span class="pl-c1">292</span>,
+            width<span class="pl-k">:</span> <span class="pl-c1">88</span>,
+            height<span class="pl-k">:</span> <span class="pl-c1">73</span>
+        },
+        {
+            x<span class="pl-k">:</span> <span class="pl-c1">0</span>,
+            y<span class="pl-k">:</span> <span class="pl-c1">73</span>,
+            width<span class="pl-k">:</span> <span class="pl-c1">88</span>,
+            height<span class="pl-k">:</span> <span class="pl-c1">73</span>
+        },
+        {
+            x<span class="pl-k">:</span> <span class="pl-c1">88</span>,
+            y<span class="pl-k">:</span> <span class="pl-c1">219</span>,
+            width<span class="pl-k">:</span> <span class="pl-c1">88</span>,
+            height<span class="pl-k">:</span> <span class="pl-c1">73</span>
+        },
+        {
+            x<span class="pl-k">:</span> <span class="pl-c1">88</span>,
+            y<span class="pl-k">:</span> <span class="pl-c1">0</span>,
+            width<span class="pl-k">:</span> <span class="pl-c1">88</span>,
+            height<span class="pl-k">:</span> <span class="pl-c1">73</span>
+        },
+    ];
+}
+<span class="pl-c">// Rejtsük el a kis képeket tartalmazó elemet</span>
+atlas.<span class="pl-c1">style</span>.<span class="pl-c1">display</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>none<span class="pl-pds">"</span></span>;
+<span class="pl-c">// Amint hozzáadjuk az img elemet és beállítjuk annak forrását, elkezdi a böngészõ letölteni a képet</span>
+<span class="pl-c1">document</span>.<span class="pl-c1">body</span>.<span class="pl-c1">appendChild</span>(atlas);
+atlas.<span class="pl-c1">src</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>planes.png<span class="pl-pds">"</span></span>;
+
+<span class="pl-c">// Források</span>
+<span class="pl-c">// http://opengameart.org/content/tappy-plane</span></pre></div>
+
+<p>Nagyszerû! Most már meg is jelenne a repülõnk, ha hozzáadnánk egy példányt a játékhoz. Mozogjunk tehát át a <em>gameScript.js</em>-be, hogy hozzá tudjuk adni az ellenség példányokat a világhoz.</p>
+
+<p>Tegyük a következõt: indítsunk egy egyszerû idõzítõt, ami fél másodpercenként próbálkozik, és valamilyen eséllyel hozzáad egy új ellenséget a pályához véletlenszerû tulajdonságokkal.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Az idõzítõ függvényekkel mûködik, amit meghívhat</span>
+<span class="pl-k">var</span> <span class="pl-en">addEnemy</span> <span class="pl-k">=</span> <span class="pl-k">function</span> () {
+    <span class="pl-c">// A függvény ne mindig adjon hozzá új repülõt, csak az esetek 70%-ában</span>
+    <span class="pl-k">if</span> (<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">&gt;=</span> <span class="pl-c1">0.7</span>) {
+        <span class="pl-k">var</span> x, xspeed, id;
+        <span class="pl-c">// Ha már hozzáadunk repülõt, akkor az 50-50%-ban balra vagy jobbra kerüljön</span>
+        <span class="pl-k">if</span> (<span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">&gt;</span> <span class="pl-c1">0.5</span>) {
+            <span class="pl-c">// Melyik oldalon kezdjen?</span>
+            x <span class="pl-k">=</span> cWidth;
+            <span class="pl-c">// Merre menjen?</span>
+            xspeed <span class="pl-k">=</span> <span class="pl-k">-</span><span class="pl-c1">50</span> <span class="pl-k">-</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">50</span>;
+            <span class="pl-c">// Melyik modellt használja?</span>
+            id <span class="pl-k">=</span> <span class="pl-c1">0</span>;
+        } <span class="pl-k">else</span> {
+            x <span class="pl-k">=</span> <span class="pl-c1">0</span>;
+            xspeed <span class="pl-k">=</span> <span class="pl-c1">50</span> <span class="pl-k">+</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> <span class="pl-c1">50</span>;
+            id <span class="pl-k">=</span> <span class="pl-c1">1</span>;
+        }
+        <span class="pl-c">// A magasság is legyen randomizált bizonyos keretek közt</span>
+        <span class="pl-k">var</span> y <span class="pl-k">=</span> cHeight <span class="pl-k">-</span> <span class="pl-c1">150</span> <span class="pl-k">-</span> <span class="pl-c1">Math</span>.<span class="pl-c1">random</span>() <span class="pl-k">*</span> (cHeight<span class="pl-k">-</span><span class="pl-c1">200</span>);
+
+        <span class="pl-c">// Készítsük el a generált paraméterekkel az ellenség példányt</span>
+        <span class="pl-k">var</span> enemy <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Enemy</span>(x, y, {
+            size<span class="pl-k">:</span> <span class="pl-c1">50</span>,
+            life<span class="pl-k">:</span> <span class="pl-c1">15000</span>,
+            <span class="pl-c">// Menjen a kép másik oldala felé</span>
+            speed<span class="pl-k">:</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(xspeed,<span class="pl-c1">0</span>),
+            <span class="pl-c">// Legyen pont a gravitációt kiegyenlítõ gyorsulása</span>
+            acceleration<span class="pl-k">:</span> world.gravity.scale(<span class="pl-k">-</span><span class="pl-c1">1</span>),
+            friction<span class="pl-k">:</span><span class="pl-c1">0</span>,
+            <span class="pl-c">// és kezdetben az ágyúgolyónál nagyobb tömege</span>
+            mass<span class="pl-k">:</span> <span class="pl-c1">10</span>,
+            planeId<span class="pl-k">:</span> id
+        });
+
+        <span class="pl-c">// Majd adjuk hozzá ezt az ellenséget a világhoz.</span>
+        world.insert(enemy,<span class="pl-c1">true</span>,<span class="pl-c1">true</span>);
+    }
+};
+
+<span class="pl-c">// Idõzítsük ezt fél másodpercenkénti végrehajtásra</span>
+<span class="pl-c1">window</span>.<span class="pl-c1">setInterval</span>(addEnemy, <span class="pl-c1">500</span>);</pre></div>
+
+<p>Ha most kipróbálnánk a játékot, és nem raktunk volna egy apró utalást egy késõbbi feature-re, akkor azt láthatnánk, hogy az ellenségek megjelennének, repülnének, és lelõhetõk lennének. Mindez annak köszönhetõ, hogy az ellenségek a körökbõl származnak, amelyek pedig animálhatók, és animációjuk során helyüket változtatják a sebességük irányában... minden visszautal az elsõ pár fejezetben elkészített aprócska, jelentéktelennek tûnõ részletre.</p>
+
+<p>Fejezzük be tehát az utolsó hiányzó kirakós darab beillesztését, oldjuk meg a pontok számolását és megjelenítését. A pontok számolását a Wolrd példányokon oldottam meg, amelyek számára a <em>.yieldPoints(p)</em> függvénnyel lehet pontokat jelenteni. A World példányok dolga hogy számítsák azt, és a képernyõn frissítsék a megjelenítését.</p>
+
+<p>Menjünk tehát a <em>World.js</em>-be, és egészítsük ki azt:</p>
+
+<div class="highlight highlight-javascript"><pre><span class="pl-c">// Az osztály elején vigyünk fel egy tagváltozót a pontok karbantartására, és egy függvényt ennek jelentésére:</span>
+
+<span class="pl-k">var</span> <span class="pl-en">World</span> <span class="pl-k">=</span> <span class="pl-k">function</span> () {
+    <span class="pl-c">// A tulajdonságokat a this objektumra tehetjük</span>
+    <span class="pl-v">this</span>.gravity <span class="pl-k">=</span> <span class="pl-k">new</span> <span class="pl-en">Vector</span>(<span class="pl-c1">0</span>, <span class="pl-c1">200</span>);
+    <span class="pl-v">this</span>.<span class="pl-c1">entities</span> <span class="pl-k">=</span> [];
+    <span class="pl-v">this</span>.drawables <span class="pl-k">=</span> [];
+    <span class="pl-v">this</span>.animatables <span class="pl-k">=</span> [];
+
+    <span class="pl-v">this</span>.points <span class="pl-k">=</span> <span class="pl-c1">0</span>;
+
+    <span class="pl-c1">this</span>.<span class="pl-en">yieldPoints</span> <span class="pl-k">=</span> <span class="pl-k">function</span>(<span class="pl-smi">amount</span>){
+        <span class="pl-v">this</span>.points <span class="pl-k">+=</span> amount;
+    };
+
+    <span class="pl-c">// ... többi World függvény</span>
+
+    <span class="pl-c">// Egészítsük ki az összes entitást kirajzoló ciklust egy apró dologgal:</span>
+    <span class="pl-c">// Még mindig a konstruktoron belül</span>
+    <span class="pl-c1">this</span>.<span class="pl-en">draw</span> <span class="pl-k">=</span> <span class="pl-k">function</span> (<span class="pl-smi">ctx</span>) {
+        <span class="pl-k">for</span> (<span class="pl-k">var</span> i <span class="pl-k">=</span> <span class="pl-c1">0</span>; i <span class="pl-k">&lt;</span> <span class="pl-v">this</span>.drawables.<span class="pl-c1">length</span>; i<span class="pl-k">++</span>) {
+            <span class="pl-k">var</span> drawable <span class="pl-k">=</span> <span class="pl-v">this</span>.drawables[i];
+            drawable.drawTo(ctx);
+        }
+        <span class="pl-c">// Rajzoljuk ki az aktuális pontokat 30px méretben</span>
+        ctx.font <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>30px sans-serif<span class="pl-pds">"</span></span>;
+        <span class="pl-c">// Középre igazítva</span>
+        ctx.<span class="pl-c1">textAlign</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>center<span class="pl-pds">"</span></span>;
+        <span class="pl-c">// A szöveg felsõ pontjával csatolva</span>
+        ctx.textBaseline <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>top<span class="pl-pds">"</span></span>;
+        <span class="pl-c">// A képernyõ feléhez, 20 magasságban a következõ szöveget:</span>
+        ctx.strokeText(<span class="pl-s"><span class="pl-pds">"</span>Points:<span class="pl-pds">"</span></span> <span class="pl-k">+</span> <span class="pl-v">this</span>.points, cWidth / <span class="pl-c1">2</span>, <span class="pl-c1">20</span>);
+    };
+</pre></div>
+
+<p>És kész. A gép elkészült. Remélem tényleg nem felejtettünk ki semmilyen apró részletet, amitõl ne mûködne a nagy egész.</p>
+
+<p>Próbáljátok ki!</p>
+
+<p>Hát nem nagyszerû látni, hogy azokból az egyszerû, demó-szerû, szimulációs apróságokból, amiket az elsõ pár fejezetben készítettünk, hova nõtte ki magát a játék? A sok apró részlet együtt mûködve egy látványos, és összetett, de mégis mûködõ egészet alkot!</p>
+
+<p>Ezzel befejezem a példafeladat leírását. Nyugodtan folytassátok, gondoljátok tovább saját fejlõdésetek és kíváncsiságotok javára a játékot. De mindenek elõtt próbáljátok felfogni és megérteni azt amit eddig összehoztunk.</p>
+
+<h2>
+<a id="user-content-15-fin" class="anchor" href="#15-fin" aria-hidden="true"><span class="octicon octicon-link"></span></a>15. Fin</h2>
+
+<p>Remélem fejlõdött a javascript programozói gyakorlatotok, és az általános webfejlesztõi szemléletetek.</p>
+
+<p>A következõkben néhány olvasnivaló linket sorolok fel:</p>
+
+<ul>
+<li><a href="http://en.wikipedia.org/wiki/JavaScript#Features">Javascript nyelvi tulajdonságok</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Inheritance_and_the_prototype_chain">Prototípus öröklés</a></li>
+<li><a href="http://arjanvandergaag.nl/blog/javascript-class-pattern.html">Osztály minták</a></li>
+<li><a href="http://addyosmani.com/resources/essentialjsdesignpatterns/book/">Javascript tervezési minták</a></li>
+<li><a href="http://superherojs.com/">További tutorialok</a></li>
+<li><a href="https://github.com/airbnb/javascript">Az airBnB kódolási stíluskészlete</a></li>
+</ul>
+
+<p><em>A leírást készítette: Szabó Alex, 2015</em></p>
+</article>
