@@ -19,3 +19,5 @@ The end results and evolution step by step:
  * http://delanni.github.io/webfejl/lvl12/
  * http://delanni.github.io/webfejl/lvl13/
  * http://delanni.github.io/webfejl/lvl14/
+
+(Control with WASD, aim and shoot with mouse)
