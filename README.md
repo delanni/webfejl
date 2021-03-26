@@ -1,4 +1,4 @@
-#Tutorial material
+# Basic canvas game tutorial
 
 This project is a school tutorial project to introduce my classmates to the 2d HTML Canvas basics through a small game.
 
