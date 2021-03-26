@@ -1,6 +1,8 @@
 Játék készítése Javascript-ben, Canvas-szel
 -------------------------------------------
 
+(Megjegyzés: talán 2021-ben már nem tűnik relevánsnak a példakód, mert sok javascript eszköz modernebb alternatívákkal kiváltható, de szerintem a feladat végigvezetése és az ott szemléltetett módszerek és gondolkodás még mindig releváns lehet egy kezdő/középhaladó web-programozó számára.)
+
 A következőkben egy meglehetősen hosszú cikkben végigviszem egy egyszerű HTML5 játék fejlesztését az alapoktól a kész játékig. A fejlesztés során nem használok mást, mint a HTML5 Javascript és Canvas eszköztárát, és egy külső forrásból származó képet.
 
 A javascript a böngészők által futtatott scriptnyelv/programozási nyelv. A legfőbb használati területe a weboldalak interaktívvá tétele felhasználói input kezeléssel, animációval, és programozott eseményekkel. A javascript futtatómotorok kifinomultságának köszönhetően olyan jó végrehajtási sebességgel rendelkeznek a böngészők, hogy játékokat is készíthetünk kizárólag kliens oldali kóddal. A játékok javascript kód formájában íródnak, és megjelenítéshez a HTMLCanvasElement példányait, a \<canvas\> elemeket használják.
@@ -29,7 +31,8 @@ A fejlesztés 14 nagyobb lépésben történik. Ezek sorban a következők:
 Az út hosszú, de tanulságos. A forráskódot folyamatosan javítjuk és szépítjük, hogy a végén egy jól áttekinthető kódunk legyen.
 
 1. A projekt alapjai
---------------------
+---
+
 Miután nulladik lépésként vettünk egy nagy levegőt, és átgondoltuk, hogy is fogjuk felépíteni a játékot, első lépésként felejtsük el amin fáradalmasan gondolkoztunk, és essünk neki a fájlok gyártásának, és a dolog majd alakulni fog magától.
 
 Készítsünk egy *index.html* fájlt, amiben a játékunkat fogjuk megjeleníteni, és készítsünk hozzá egy *gameScript.js* fájlt, amibe a játékot megvalósító javascript kód fog kerülni a későbbiekben.
@@ -68,8 +71,10 @@ Az *index.html*-ben ágyazzunk meg a szokásos általános HTML alapokkal, dokum
 
 A stílusokkal ki szerettem volna emelni, hogy középen már ott van egy vászon, amin még egyelőre nem történik semmi. Ha ezt megnyitjuk egy böngészőben, akkor láthatjuk, hogy a háttér színétől kicsit eltérő színben, kerettel ott egy HTMLCanvasElement, ami a további munkánk alapját fogja képezni.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl1/
+
 2. A canvas és a renderloop alapjai
----------------
+---
 
 A második lépésben a HTML Canvas rajzolást készítjük elő, és egy alapvető ciklust készítünk a játékhoz, ami folyamatosan frissíteni fogja, és kirajzolja a játékunk világának állapotát. Lássunk is hozzá, ehhez az eddig üresen várakozó *gameScript.js* fájlt kell szerkesztenünk. Amit ide írunk, annak hatását a HTML-ben lévő hivatkozás miatt az *index.html*-ben látjuk.
 
@@ -110,8 +115,10 @@ gameLoop(); // Kell egy legelső hívás, hogy elinduljon a ciklus
 
 A böngészőben most egy világos szürke vásznat kell látnunk. Bár ez még nem látványos, tudnunk kell, hogy ez a ciklus lesz minden alapja.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl2/
+
 3. A játékvilág és rajzolás a canvas-en
----------------
+---
 
 Kezdjünk el objektumokat gyártani! Gyakori megközelítés a játékoknál, hogy készítünk egy *World objektumot*, amely tartalmazza (referenciája van rá) a játékban lévő összes entitást, egyedet, akit ki kell rajzolni, vagy animálni kell, vagy mindenesetre jó ha tudunk róla, hogy a világunkhoz tartozik. A world objektum a böngészőisten noteszfüzete, ahol nyilvántartja a világ állapotát. 
 
@@ -160,8 +167,10 @@ var gameLoop = function(){
 
 Mint látható, a render ciklusban a világ állapotaként tárolt objektumokon (ami egyelőre 1 db négyzet) lovaglunk végig, és rajzoljuk ki őket. Ezek eredményeképp látunk egy négyzetet a (100,100) koordinátapártól kezdődően (30,30) méretben.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl3/
+
 4. Játékelemek animációja
----------------
+---
 
 A statikus világból a mozgó világba úgy jutunk el, ha az előző, rajzolási módszer analógiájára elkészítjük az animálhatók tömbjét, és a render ciklusban ezen is végigsétálunk. Tároljuk tehát az összes mozgatható, animálható element egy tömbben a világ objektumunkon. Ezt ugye gond nélkül megtehetjük, és egy elemet (például az előző négyzetünket) belehelyezhetünk egyszerre a rajzolhatók és az animálhatók tömbjébe is, mert a javascript objektumokról tetszőleges referenciát készíthetünk. (Hiszen amikor tömbökbe teszünk egy objektumot, akkor az igazi objektum a memóriában csak egy példányban él, de több helyről hivatkoznak ugyanarra az egy objektumra).
 
@@ -228,9 +237,10 @@ _Megjegyzés:_ Azt, hogy az animálhatók tömbjébe (_animatables_) csak olyano
 
 A következő lépésben több példánnyal fogunk dolgozni, és ezekhez osztályokat is gyártunk.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl4/
 
 5. Vektor és négyzet osztályok, példányosítás
----------------
+---
 
 Ha az előzőekben megjelenített, és animált négyzeteinkből többet szeretnénk létrehozni, akkor csinálhatjuk azt, hogy a felépített objektumot egyszerűen egy ciklusban gyártjuk, és így sok hasonló objektumot tudunk elkészíteni, de egy kézenfekvőbb, és elfogadottabb megközelítés, ha készítünk egy "osztályt" erre. Az objektumorientált programozási nyelvekből ismert osztályoknak a javascriptben igazából nincs megfelelője, hiszen a javascript nem osztályokat, hanem objektumokat, és nem leszármaztatásos öröklést, hanem prototípusokat használ. Ezen fogalmak kifejtése kicsit hosszas munka lenne, de aki valóban szeretne foglalkozni a nyelvvel, érdemes utánanéznie. 
 
@@ -336,8 +346,10 @@ Ez utóbbi szintaxis már kezd eléggé hasonlítani a C#-ban megszokottakhoz. A
 
 Ha ezután elindítjuk a játékot, látjuk, hogy sok négyzet példány megjelent a képen, és izegnek-mozognak. Ezzel megtanultuk az osztályok és a példányosítás alapjait. Ezt akkor érdemes használni, tehát, ha sok hasoló viselkedésű objektumot szeretnénk csinálni a játékban (pl.: pénzérmék, ellenségek, lövedékek). A következő lépés? Valahogy próbáljunk interaktivitást vinni a demónkba.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl5/
+
 6. Inputkezelés
----------------
+---
 
 Ebben a fejezetben minimális inputkezelést fogunk megvalósítani olyan formában, hogy a kis négyzetek az egér pozíciója felé mozognak.
 Első lépésként mozgassuk át a négyzetünket definiáló kódrészleteket egy külön fájlba, hogy ne piszkítsuk vele a _gameScript.js_ fájljainkat.
@@ -494,9 +506,10 @@ Ha mindennel végeztünk, fújjuk ki magunkat, és gondoljuk át, mi is amit meg
 
 Ha már értjük mit csináltunk, próbáljuk ki, hogy valóban az történik-e amit vártunk.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl6/
 
 7. Pszeudo-fizikai megközelítés
----------------
+---
 
 Azért írtam pszeudo-fizikait, mert jól hangzik, na meg persze azért is, mert nem lesz valódi fizikai szimuláció a játékban. Kicsit távolról próbálunk pár dolgot közelíteni, amit ismerünk a középiskolai fizikából. Első lépésként a gyorsulás-sebesség-pozíció hármast próbáljuk jobban közelíteni, amit már az előző részben is megemlítettünk.
 
@@ -595,8 +608,10 @@ Miután a négyzeteink felkészültek arra, hogy gyorsulással vezéreljük őke
 ```
 Ha semmit nem felejtettünk el, akkor az előzőhöz hasonlóképp működik a kis demónk, a négyzetek itt is az egeret követik, de mozgásuk láthatóan rugalmasabb, dinamikusabb.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl7/
+
 8. Pszeudo-fizika, gravitáció
----------------
+---
 
 Az új és szép dinamikus világunkban van még egy triviális dolog ami segíthet a játékunk összhatásán: gravitáció!
 Majdnem minden játékban előfordul, és néhány játék szinte csak erre alapoz. Az emberek életük során már elég jól előre tudják becsülni a dolgok röppályáját, ami annak köszönhető, hogy már megszoktuk és természetesnek tartjuk a gravitációt. Tehát ha a játékunk nem használ gravitációs jellegű erőt, akkor az természetellenes hatással fog járni.
@@ -725,8 +740,11 @@ Square.prototype.drawTo = function(context){
 
 Ha mindezzel végeztünk, megint pihenjünk rá, és nézzük meg munkánk eredményét. Ezúttal már egy játékhoz hasonló kis demót kaptunk, ahol rugalmas (látható, vagy láthatatlan, a bónusz lépéstől függ) fonalon lengethetünk négyzeteket, amely fonalat, ha elengedünk, a négyzetek lezuhannak.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl8/
+
 9. Ágyú és robbanások
----------------
+---
+
 Gondolom, ha eddig volt türelmed eljutni a tutorialban, akkor neked is megfordult a fejedben, hogy milyen játékot lehetne ezekből az eszközökből, ezekkel a mechanikai elemekkel összerakni. Most még egy utolsó effektet bevezetünk, amivel tovább bővítjük a keretrendszerünket, ami végül otthont fog adni egy játéknak, amiről bővebben a következő részben írok.
 
 Most tehát még egy effektust vezetünk be, ami kicsit testes (sok kód kell hozzá), de annál látványosabb, és sokban feldobja a játékunkat. 
@@ -958,8 +976,11 @@ Ha nem rontottunk el semmit, és én sem felejtettem el semmit, akkor ez a demó
 
 A következő részben az eddig felépített dolgok használatával, és testreszabásával fogunk egy minimális játéklogikát megvalósítani.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl9/
+
 10. Játék alapok - A tank
----------------
+---
+
 A játék tehát egy ügyességi játék lesz, amelyben repülő ellenségeket kell lelövöldözni a földön mozgó tankunkból. Ebben a fejezetben létrehozzuk a játékost képviselő tankot, megoldjuk annak irányítását, javítunk a részecskék memória- és processzorhasználatán, és használjuk az előzőekben elkészített robbanást, mint a játékos fegyverét.
 
 A legegyszerűbb lépéssel kezdem, a tisztogatással. Az előző demóban látható volt, hogy amikor kilőttünk valamit, a robbanással keletkező törmelék és ágyúgolyó valószínűleg soha nem került kitörlésre a világból, ezért sok lövés után a render-ciklus akár részecskék ezreit is animálni és rajzolni volt kénytelen. Ez nyilvánvaló pazarlás, hiszen nincs szükség a részecskéknek örök életre. A következőkben a Circle és Square osztályokon bevezetünk egy _.life_ változót, amellyel szabályozhatjuk meddig éljenek a részecskék.
@@ -1196,8 +1217,11 @@ Explosion.prototype.fire = function(origin) {
 
 Szóval, talán végeztünk. A tankunk mozog, és golyókat lő, amiket tűz részecskék kísérnek, és a tank kivételével mindenki engedelmeskedik a gravitációnak. Nagyszerű látvány, nemde?
 
+Végeredmény: http://delanni.github.io/webfejl/lvl10/
+
 11. Játék alapok - Ütközésdetektálás
----------------
+---
+
 A játékokban az ütközésdetektálás fontos pont. A játékok legtöbb mechanikája és logikája valamilyen formában arra épül, hogy egyes egységek, entitások ütköznek. Ezt detektálni nem mindig triviális feladat, de a mi esetünkben (mivel nagyon egyszerű entitásaink vannak) könnyen megoldható. 
 
 Két négyzet közti ütközés az AABB módszerrel megoldható, de leegyszerűsíthető a bennfoglaló körök ütköztetésére. És a körök ütközésének detektálása pedig teljesen triviális: ha középpontjaik távolsága kisebb mint a sugarak összege, akkor ütköznek.
@@ -1335,8 +1359,10 @@ Még egy apró dolgot megtehetünk itt, jó lenne lekorlátozni, hogy a tank csa
 
 A következő lépésben egy nagyon jópofa és látványos dolgot fogunk megcsinálni, ami sokkal egyszerűbb, mint aminek tűnik: rugalmas ütközést a golyók közt.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl1/
+
 12. Játék alapok - Rugalmas ütközés
----------------
+---
 
 A rugalmas ütközés is egy olyan dolog, amit az emberi agy már nagyon természetesen kezel, és előre becsül, ezért annyira jó látni a játékokban, és annyira rossz, ha nem úgy működik ahogy kellene neki.
 
@@ -1424,8 +1450,10 @@ if (mouse.left) {
                 })],
 ```
 
+Végeredmény: http://delanni.github.io/webfejl/lvl12/
+
 13. Rendszerezés, refaktorálás
----------------
+---
 
 Ebben a lépésben nem fogunk új képességet vinni a játékba, hanem inkább megpróbáljuk a kódot egy kicsit rendbetenni, mielőtt az utolsó felvonást elkezdjük. A refaktorálás általában kód újraszervezést jelent, a mi esetünkben most ez csak annyit jelent, hogy a játékos és világ objektumainkból olyan osztályokat csinálunk, amelyekkel számos játékost, vagy világot tudnánk generálni. Még ha csak 1-1 darabot is akarunk készíteni belőlük, érdemes osztályokba szervezni őket, hogy ne egy fájlt szennyezzünk tele a nem igazán releváns kódrészletekkel. Így tehát kivonunk egy csomó kódot a _gameScript.js_-ből, és létrehozzuk a _Player.js_-t, és a _World.js_-t, és közben megtanulunk egy másik módszert az osztályok szimulálására.
 
@@ -1629,8 +1657,10 @@ Ugye mennyivel szebb és átláthatóbb? Nyilván nagyon sok nem-triviális rés
 
 Ha mindent jól csináltunk, a játékunk ugyanúgy fut ahogy eddig, annyi változott csak, hogy a _world_ és a _player_ példányaink példányosítással készülnek objektum literálok helyett, és másik fájlokban tároljuk az osztályok definícióját.
 
+Végeredmény: http://delanni.github.io/webfejl/lvl13/
+
 14. Játék logika - Ellenségek
----------------
+---
 
 Rövid szusszanás után egy utolsó nagy lépésben értelmet adunk eddigi fáradozásainknak azzal, hogy célpontokat és pontozást teszünk a játékba.
 
@@ -1880,8 +1910,10 @@ Hát nem nagyszerű látni, hogy azokból az egyszerű, demó-szerű, szimuláci
 
 Ezzel befejezem a példafeladat leírását. Nyugodtan folytassátok, gondoljátok tovább saját fejlődésetek és kíváncsiságotok javára a játékot. De mindenek előtt próbáljátok felfogni és megérteni azt amit eddig összehoztunk.
 
+Ez már tényleg a végeredmény: http://delanni.github.io/webfejl/lvl14/
+
 15. Fin
-----------------
+---
 
 Remélem fejlődött a javascript programozói gyakorlatotok, és az általános webfejlesztői szemléletetek.
 
