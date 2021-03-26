@@ -21,3 +21,5 @@ The end results and evolution step by step:
  * http://delanni.github.io/webfejl/lvl14/
 
 (Control with WASD, aim and shoot with mouse)
+
+You'll find the readable format of the tutorial (only in Hungarian) in here: https://github.com/delanni/webfejl/tree/master/Tut
